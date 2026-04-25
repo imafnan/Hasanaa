@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "6FEn1HfFFLJHIOXbSqU8d"
+uri = "file://artifacts/hasanaa/public/hero-banner.png"
+type = "image"
+title = "Hero banner Islamic menswear"
+
+[[generated]]
+id = "LAqCi6gkzgKZTHTPuFMtb"
+uri = "file://artifacts/hasanaa/public/category-men.png"
+type = "image"
+title = "Men category image"
+
+[[generated]]
+id = "kMa8OQlKNKuv2yclZbqiJ"
+uri = "file://artifacts/hasanaa/public/category-kids.png"
+type = "image"
+title = "Kids category image"

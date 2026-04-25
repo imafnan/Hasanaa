@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Hasanaa"
+version = "1.0.0"
+id = "artifacts/hasanaa"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25488
+
+[services.development]
+run = "pnpm --filter @workspace/hasanaa run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hasanaa", "run", "build" ]
+publicDir = "artifacts/hasanaa/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25488"
+BASE_PATH = "/"
