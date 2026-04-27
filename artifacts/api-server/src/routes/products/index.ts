@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, productsTable, categoriesTable, subcategoriesTable } from "@workspace/db";
 import {
   CreateProductBody,
@@ -18,6 +18,7 @@ function formatProduct(
   p: typeof productsTable.$inferSelect,
   categoryName?: string | null,
   subcategoryName?: string | null,
+  variants: Array<{ id: number; name: string; imageUrl: string | null; price: string; colors: string[] }> = [],
 ) {
   return {
     id: p.id,
@@ -27,6 +28,9 @@ function formatProduct(
     originalPrice: p.originalPrice ? String(p.originalPrice) : null,
     imageUrl: p.imageUrl ?? null,
     images: p.images ?? [],
+    sizeChartUrl: p.sizeChartUrl ?? null,
+    variantIds: p.variantIds ?? [],
+    variants,
     categoryId: p.categoryId ?? null,
     categoryName: categoryName ?? null,
     subcategoryId: p.subcategoryId ?? null,
@@ -38,6 +42,18 @@ function formatProduct(
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
+}
+
+async function fetchVariants(variantIds: number[]) {
+  if (!variantIds || variantIds.length === 0) return [];
+  const rows = await db.select().from(productsTable).where(inArray(productsTable.id, variantIds));
+  return rows.map(v => ({
+    id: v.id,
+    name: v.name,
+    imageUrl: v.imageUrl ?? null,
+    price: String(v.price),
+    colors: v.colors ?? [],
+  }));
 }
 
 router.get("/products", async (req, res): Promise<void> => {
@@ -68,7 +84,7 @@ router.get("/products", async (req, res): Promise<void> => {
         .orderBy(productsTable.createdAt);
 
   res.json(ListProductsResponse.parse(products.map(({ product, categoryName, subcategoryName }) =>
-    formatProduct(product, categoryName, subcategoryName)
+    formatProduct(product, categoryName, subcategoryName, [])
   )));
 });
 
@@ -86,6 +102,8 @@ router.post("/products", async (req, res): Promise<void> => {
     originalPrice: parsed.data.originalPrice ?? null,
     imageUrl: parsed.data.imageUrl ?? null,
     images: parsed.data.images ?? [],
+    sizeChartUrl: (parsed.data as any).sizeChartUrl ?? null,
+    variantIds: (parsed.data as any).variantIds ?? [],
     categoryId: parsed.data.categoryId ?? null,
     subcategoryId: (parsed.data as any).subcategoryId ?? null,
     inStock: parsed.data.inStock ?? true,
@@ -104,8 +122,9 @@ router.post("/products", async (req, res): Promise<void> => {
     const [sub] = await db.select().from(subcategoriesTable).where(eq(subcategoriesTable.id, product.subcategoryId));
     subcategoryName = sub?.name ?? null;
   }
+  const variants = await fetchVariants(product.variantIds ?? []);
 
-  res.status(201).json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName)));
+  res.status(201).json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName, variants)));
 });
 
 router.get("/products/:id", async (req, res): Promise<void> => {
@@ -127,7 +146,8 @@ router.get("/products/:id", async (req, res): Promise<void> => {
   }
 
   const { product, categoryName, subcategoryName } = result[0];
-  res.json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName)));
+  const variants = await fetchVariants(product.variantIds ?? []);
+  res.json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName, variants)));
 });
 
 router.patch("/products/:id", async (req, res): Promise<void> => {
@@ -150,6 +170,8 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
   if (parsed.data.originalPrice !== undefined) updateData.originalPrice = parsed.data.originalPrice;
   if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
   if (parsed.data.images != null) updateData.images = parsed.data.images;
+  if ((parsed.data as any).sizeChartUrl !== undefined) updateData.sizeChartUrl = (parsed.data as any).sizeChartUrl;
+  if ((parsed.data as any).variantIds != null) updateData.variantIds = (parsed.data as any).variantIds;
   if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
   if ((parsed.data as any).subcategoryId !== undefined) updateData.subcategoryId = (parsed.data as any).subcategoryId;
   if (parsed.data.inStock != null) updateData.inStock = parsed.data.inStock;
@@ -173,8 +195,9 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
     const [sub] = await db.select().from(subcategoriesTable).where(eq(subcategoriesTable.id, product.subcategoryId));
     subcategoryName = sub?.name ?? null;
   }
+  const variants = await fetchVariants(product.variantIds ?? []);
 
-  res.json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName)));
+  res.json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName, variants)));
 });
 
 router.delete("/products/:id", async (req, res): Promise<void> => {

@@ -49,6 +49,25 @@ function PromotionGrid({ promo }: { promo: any }) {
   );
 }
 
+function MidBanner({ banner }: { banner: any }) {
+  const href = banner.categoryId ? `/category/${banner.categoryId}` : banner.linkUrl || null;
+  const content = (
+    <div className="relative w-full h-[220px] md:h-[320px] overflow-hidden rounded-xl">
+      <img src={banner.imageUrl} alt={banner.title} className="absolute inset-0 w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
+      <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-16">
+        <h2 className="text-2xl md:text-4xl font-serif font-bold text-white mb-2">{banner.title}</h2>
+        {banner.subtitle && <p className="text-white/80 text-base md:text-lg mb-4">{banner.subtitle}</p>}
+        {href && (
+          <span className="inline-block bg-white text-foreground font-medium text-sm px-5 py-2 rounded-full w-fit">Shop Now</span>
+        )}
+      </div>
+    </div>
+  );
+
+  return href ? <Link href={href}>{content}</Link> : content;
+}
+
 export default function Home() {
   const { data: banners, isLoading: loadingBanners } = useListBanners({ query: { queryKey: getListBannersQueryKey() } });
   const { data: categories, isLoading: loadingCategories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
@@ -56,6 +75,7 @@ export default function Home() {
   const { data: promotions } = useListPromotions({ query: { queryKey: getListPromotionsQueryKey() } });
 
   const heroBanners = (banners || []).filter(b => b.isActive && ((b as any).position === "hero" || !(b as any).position)).sort((a, b) => a.sortOrder - b.sortOrder);
+  const midBanners = (banners || []).filter(b => b.isActive && (b as any).position === "mid").sort((a, b) => a.sortOrder - b.sortOrder);
   const activeCategories = (categories || []).filter(c => c.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
   const activePromotions = (promotions || []).filter((p: any) => p.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
   const topPromotions = activePromotions.filter((p: any) => p.position === "top");
@@ -163,6 +183,15 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Mid-page Banners */}
+      {midBanners.length > 0 && (
+        <section className="container mx-auto px-4 flex flex-col gap-6">
+          {midBanners.map((banner) => (
+            <MidBanner key={banner.id} banner={banner} />
+          ))}
+        </section>
+      )}
 
       {/* Featured Products */}
       {featuredProducts && featuredProducts.length > 0 && (

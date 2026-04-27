@@ -11,6 +11,8 @@ export const productsTable = pgTable("products", {
   originalPrice: numeric("original_price", { precision: 10, scale: 2 }),
   imageUrl: text("image_url"),
   images: text("images").array().notNull().default([]),
+  sizeChartUrl: text("size_chart_url"),
+  variantIds: integer("variant_ids").array().notNull().default([]),
   categoryId: integer("category_id").references(() => categoriesTable.id, { onDelete: "set null" }),
   subcategoryId: integer("subcategory_id"),
   inStock: boolean("in_stock").notNull().default(true),

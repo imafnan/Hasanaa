@@ -116,6 +116,15 @@ export interface Subcategory {
   updatedAt: string;
 }
 
+export interface VariantProduct {
+  id: number;
+  name: string;
+  /** @nullable */
+  imageUrl: string | null;
+  price: string;
+  colors: string[];
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -127,6 +136,10 @@ export interface Product {
   /** @nullable */
   imageUrl: string | null;
   images: string[];
+  /** @nullable */
+  sizeChartUrl: string | null;
+  variantIds: number[];
+  variants: VariantProduct[];
   /** @nullable */
   categoryId: number | null;
   /** @nullable */
@@ -281,6 +294,9 @@ export interface CreateProductBody {
   imageUrl?: string | null;
   images?: string[];
   /** @nullable */
+  sizeChartUrl?: string | null;
+  variantIds?: number[];
+  /** @nullable */
   categoryId?: number | null;
   /** @nullable */
   subcategoryId?: number | null;
@@ -302,6 +318,9 @@ export interface UpdateProductBody {
   /** @nullable */
   imageUrl?: string | null;
   images?: string[];
+  /** @nullable */
+  sizeChartUrl?: string | null;
+  variantIds?: number[];
   /** @nullable */
   categoryId?: number | null;
   /** @nullable */
