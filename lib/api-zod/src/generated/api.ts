@@ -51,6 +51,9 @@ export const ListBannersResponseItem = zod.object({
   subtitle: zod.string().nullable(),
   imageUrl: zod.string(),
   linkUrl: zod.string().nullable(),
+  categoryId: zod.number().nullable(),
+  subcategoryId: zod.number().nullable(),
+  position: zod.string(),
   isActive: zod.boolean(),
   sortOrder: zod.number(),
   createdAt: zod.string(),
@@ -66,6 +69,9 @@ export const CreateBannerBody = zod.object({
   subtitle: zod.string().nullish(),
   imageUrl: zod.string(),
   linkUrl: zod.string().nullish(),
+  categoryId: zod.number().nullish(),
+  subcategoryId: zod.number().nullish(),
+  position: zod.string().optional(),
   isActive: zod.boolean().optional(),
   sortOrder: zod.number().optional(),
 });
@@ -83,6 +89,9 @@ export const GetBannerResponse = zod.object({
   subtitle: zod.string().nullable(),
   imageUrl: zod.string(),
   linkUrl: zod.string().nullable(),
+  categoryId: zod.number().nullable(),
+  subcategoryId: zod.number().nullable(),
+  position: zod.string(),
   isActive: zod.boolean(),
   sortOrder: zod.number(),
   createdAt: zod.string(),
@@ -101,6 +110,9 @@ export const UpdateBannerBody = zod.object({
   subtitle: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
   linkUrl: zod.string().nullish(),
+  categoryId: zod.number().nullish(),
+  subcategoryId: zod.number().nullish(),
+  position: zod.string().nullish(),
   isActive: zod.boolean().nullish(),
   sortOrder: zod.number().nullish(),
 });
@@ -111,6 +123,9 @@ export const UpdateBannerResponse = zod.object({
   subtitle: zod.string().nullable(),
   imageUrl: zod.string(),
   linkUrl: zod.string().nullable(),
+  categoryId: zod.number().nullable(),
+  subcategoryId: zod.number().nullable(),
+  position: zod.string(),
   isActive: zod.boolean(),
   sortOrder: zod.number(),
   createdAt: zod.string(),
@@ -153,7 +168,7 @@ export const CreateCategoryBody = zod.object({
 });
 
 /**
- * @summary Get a category with its products
+ * @summary Get a category with its products and subcategories
  */
 export const GetCategoryParams = zod.object({
   id: zod.coerce.number(),
@@ -169,6 +184,19 @@ export const GetCategoryResponse = zod.object({
   sortOrder: zod.number(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+  subcategories: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      slug: zod.string(),
+      categoryId: zod.number(),
+      imageUrl: zod.string().nullable(),
+      isActive: zod.boolean(),
+      sortOrder: zod.number(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
   products: zod.array(
     zod.object({
       id: zod.number(),
@@ -180,6 +208,8 @@ export const GetCategoryResponse = zod.object({
       images: zod.array(zod.string()),
       categoryId: zod.number().nullable(),
       categoryName: zod.string().nullable(),
+      subcategoryId: zod.number().nullable(),
+      subcategoryName: zod.string().nullable(),
       inStock: zod.boolean(),
       isFeatured: zod.boolean(),
       sizes: zod.array(zod.string()),
@@ -226,10 +256,120 @@ export const DeleteCategoryParams = zod.object({
 });
 
 /**
+ * @summary List subcategories, optionally filtered by categoryId
+ */
+export const ListSubcategoriesQueryParams = zod.object({
+  categoryId: zod.coerce.number().nullish(),
+});
+
+export const ListSubcategoriesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  slug: zod.string(),
+  categoryId: zod.number(),
+  imageUrl: zod.string().nullable(),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListSubcategoriesResponse = zod.array(
+  ListSubcategoriesResponseItem,
+);
+
+/**
+ * @summary Create a subcategory
+ */
+export const CreateSubcategoryBody = zod.object({
+  name: zod.string(),
+  slug: zod.string(),
+  categoryId: zod.number(),
+  imageUrl: zod.string().nullish(),
+  isActive: zod.boolean().optional(),
+  sortOrder: zod.number().optional(),
+});
+
+/**
+ * @summary Get a subcategory with its products
+ */
+export const GetSubcategoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetSubcategoryResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  slug: zod.string(),
+  categoryId: zod.number(),
+  imageUrl: zod.string().nullable(),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+  products: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      description: zod.string().nullable(),
+      price: zod.string(),
+      originalPrice: zod.string().nullable(),
+      imageUrl: zod.string().nullable(),
+      images: zod.array(zod.string()),
+      categoryId: zod.number().nullable(),
+      categoryName: zod.string().nullable(),
+      subcategoryId: zod.number().nullable(),
+      subcategoryName: zod.string().nullable(),
+      inStock: zod.boolean(),
+      isFeatured: zod.boolean(),
+      sizes: zod.array(zod.string()),
+      colors: zod.array(zod.string()),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Update a subcategory
+ */
+export const UpdateSubcategoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateSubcategoryBody = zod.object({
+  name: zod.string().nullish(),
+  slug: zod.string().nullish(),
+  categoryId: zod.number().nullish(),
+  imageUrl: zod.string().nullish(),
+  isActive: zod.boolean().nullish(),
+  sortOrder: zod.number().nullish(),
+});
+
+export const UpdateSubcategoryResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  slug: zod.string(),
+  categoryId: zod.number(),
+  imageUrl: zod.string().nullable(),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a subcategory
+ */
+export const DeleteSubcategoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary List all products
  */
 export const ListProductsQueryParams = zod.object({
   categoryId: zod.coerce.number().nullish(),
+  subcategoryId: zod.coerce.number().nullish(),
   featured: zod.coerce.string().nullish(),
 });
 
@@ -243,6 +383,8 @@ export const ListProductsResponseItem = zod.object({
   images: zod.array(zod.string()),
   categoryId: zod.number().nullable(),
   categoryName: zod.string().nullable(),
+  subcategoryId: zod.number().nullable(),
+  subcategoryName: zod.string().nullable(),
   inStock: zod.boolean(),
   isFeatured: zod.boolean(),
   sizes: zod.array(zod.string()),
@@ -263,6 +405,7 @@ export const CreateProductBody = zod.object({
   imageUrl: zod.string().nullish(),
   images: zod.array(zod.string()).optional(),
   categoryId: zod.number().nullish(),
+  subcategoryId: zod.number().nullish(),
   inStock: zod.boolean().optional(),
   isFeatured: zod.boolean().optional(),
   sizes: zod.array(zod.string()).optional(),
@@ -286,6 +429,8 @@ export const GetProductResponse = zod.object({
   images: zod.array(zod.string()),
   categoryId: zod.number().nullable(),
   categoryName: zod.string().nullable(),
+  subcategoryId: zod.number().nullable(),
+  subcategoryName: zod.string().nullable(),
   inStock: zod.boolean(),
   isFeatured: zod.boolean(),
   sizes: zod.array(zod.string()),
@@ -309,6 +454,7 @@ export const UpdateProductBody = zod.object({
   imageUrl: zod.string().nullish(),
   images: zod.array(zod.string()).optional(),
   categoryId: zod.number().nullish(),
+  subcategoryId: zod.number().nullish(),
   inStock: zod.boolean().nullish(),
   isFeatured: zod.boolean().nullish(),
   sizes: zod.array(zod.string()).optional(),
@@ -325,6 +471,8 @@ export const UpdateProductResponse = zod.object({
   images: zod.array(zod.string()),
   categoryId: zod.number().nullable(),
   categoryName: zod.string().nullable(),
+  subcategoryId: zod.number().nullable(),
+  subcategoryName: zod.string().nullable(),
   inStock: zod.boolean(),
   isFeatured: zod.boolean(),
   sizes: zod.array(zod.string()),
@@ -484,6 +632,127 @@ export const GetOrderStatsResponse = zod.object({
       updatedAt: zod.string(),
     }),
   ),
+});
+
+/**
+ * @summary List all promotion blocks
+ */
+export const ListPromotionsResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  gridType: zod.number().describe("2 for 2-column grid, 4 for 4-column grid"),
+  position: zod.string().describe("top or bottom"),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  items: zod.array(
+    zod.object({
+      imageUrl: zod.string(),
+      label: zod.string(),
+      categoryId: zod.number().nullish(),
+      subcategoryId: zod.number().nullish(),
+    }),
+  ),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListPromotionsResponse = zod.array(ListPromotionsResponseItem);
+
+/**
+ * @summary Create a promotion block
+ */
+export const CreatePromotionBody = zod.object({
+  title: zod.string(),
+  gridType: zod.number(),
+  position: zod.string(),
+  isActive: zod.boolean().optional(),
+  sortOrder: zod.number().optional(),
+  items: zod
+    .array(
+      zod.object({
+        imageUrl: zod.string(),
+        label: zod.string(),
+        categoryId: zod.number().nullish(),
+        subcategoryId: zod.number().nullish(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Get a promotion block
+ */
+export const GetPromotionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetPromotionResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  gridType: zod.number().describe("2 for 2-column grid, 4 for 4-column grid"),
+  position: zod.string().describe("top or bottom"),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  items: zod.array(
+    zod.object({
+      imageUrl: zod.string(),
+      label: zod.string(),
+      categoryId: zod.number().nullish(),
+      subcategoryId: zod.number().nullish(),
+    }),
+  ),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update a promotion block
+ */
+export const UpdatePromotionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdatePromotionBody = zod.object({
+  title: zod.string().nullish(),
+  gridType: zod.number().nullish(),
+  position: zod.string().nullish(),
+  isActive: zod.boolean().nullish(),
+  sortOrder: zod.number().nullish(),
+  items: zod
+    .array(
+      zod.object({
+        imageUrl: zod.string(),
+        label: zod.string(),
+        categoryId: zod.number().nullish(),
+        subcategoryId: zod.number().nullish(),
+      }),
+    )
+    .optional(),
+});
+
+export const UpdatePromotionResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  gridType: zod.number().describe("2 for 2-column grid, 4 for 4-column grid"),
+  position: zod.string().describe("top or bottom"),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  items: zod.array(
+    zod.object({
+      imageUrl: zod.string(),
+      label: zod.string(),
+      categoryId: zod.number().nullish(),
+      subcategoryId: zod.number().nullish(),
+    }),
+  ),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a promotion block
+ */
+export const DeletePromotionParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**

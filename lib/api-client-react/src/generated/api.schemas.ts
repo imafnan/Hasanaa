@@ -41,6 +41,11 @@ export interface Banner {
   imageUrl: string;
   /** @nullable */
   linkUrl: string | null;
+  /** @nullable */
+  categoryId: number | null;
+  /** @nullable */
+  subcategoryId: number | null;
+  position: string;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -54,6 +59,11 @@ export interface CreateBannerBody {
   imageUrl: string;
   /** @nullable */
   linkUrl?: string | null;
+  /** @nullable */
+  categoryId?: number | null;
+  /** @nullable */
+  subcategoryId?: number | null;
+  position?: string;
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -68,6 +78,12 @@ export interface UpdateBannerBody {
   /** @nullable */
   linkUrl?: string | null;
   /** @nullable */
+  categoryId?: number | null;
+  /** @nullable */
+  subcategoryId?: number | null;
+  /** @nullable */
+  position?: string | null;
+  /** @nullable */
   isActive?: boolean | null;
   /** @nullable */
   sortOrder?: number | null;
@@ -81,6 +97,19 @@ export interface Category {
   imageUrl: string | null;
   /** @nullable */
   parentTag: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Subcategory {
+  id: number;
+  name: string;
+  slug: string;
+  categoryId: number;
+  /** @nullable */
+  imageUrl: string | null;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -102,6 +131,10 @@ export interface Product {
   categoryId: number | null;
   /** @nullable */
   categoryName: string | null;
+  /** @nullable */
+  subcategoryId: number | null;
+  /** @nullable */
+  subcategoryName: string | null;
   inStock: boolean;
   isFeatured: boolean;
   sizes: string[];
@@ -122,6 +155,7 @@ export interface CategoryWithProducts {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  subcategories: Subcategory[];
   products: Product[];
 }
 
@@ -151,6 +185,91 @@ export interface UpdateCategoryBody {
   sortOrder?: number | null;
 }
 
+export interface SubcategoryWithProducts {
+  id: number;
+  name: string;
+  slug: string;
+  categoryId: number;
+  /** @nullable */
+  imageUrl: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  products: Product[];
+}
+
+export interface CreateSubcategoryBody {
+  name: string;
+  slug: string;
+  categoryId: number;
+  /** @nullable */
+  imageUrl?: string | null;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateSubcategoryBody {
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  slug?: string | null;
+  /** @nullable */
+  categoryId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  isActive?: boolean | null;
+  /** @nullable */
+  sortOrder?: number | null;
+}
+
+export interface PromotionItem {
+  imageUrl: string;
+  label: string;
+  /** @nullable */
+  categoryId?: number | null;
+  /** @nullable */
+  subcategoryId?: number | null;
+}
+
+export interface Promotion {
+  id: number;
+  title: string;
+  /** 2 for 2-column grid, 4 for 4-column grid */
+  gridType: number;
+  /** top or bottom */
+  position: string;
+  isActive: boolean;
+  sortOrder: number;
+  items: PromotionItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePromotionBody {
+  title: string;
+  gridType: number;
+  position: string;
+  isActive?: boolean;
+  sortOrder?: number;
+  items?: PromotionItem[];
+}
+
+export interface UpdatePromotionBody {
+  /** @nullable */
+  title?: string | null;
+  /** @nullable */
+  gridType?: number | null;
+  /** @nullable */
+  position?: string | null;
+  /** @nullable */
+  isActive?: boolean | null;
+  /** @nullable */
+  sortOrder?: number | null;
+  items?: PromotionItem[];
+}
+
 export interface CreateProductBody {
   name: string;
   /** @nullable */
@@ -163,6 +282,8 @@ export interface CreateProductBody {
   images?: string[];
   /** @nullable */
   categoryId?: number | null;
+  /** @nullable */
+  subcategoryId?: number | null;
   inStock?: boolean;
   isFeatured?: boolean;
   sizes?: string[];
@@ -183,6 +304,8 @@ export interface UpdateProductBody {
   images?: string[];
   /** @nullable */
   categoryId?: number | null;
+  /** @nullable */
+  subcategoryId?: number | null;
   /** @nullable */
   inStock?: boolean | null;
   /** @nullable */
@@ -262,11 +385,22 @@ export interface UploadImageResponse {
   url: string;
 }
 
+export type ListSubcategoriesParams = {
+  /**
+   * @nullable
+   */
+  categoryId?: number | null;
+};
+
 export type ListProductsParams = {
   /**
    * @nullable
    */
   categoryId?: number | null;
+  /**
+   * @nullable
+   */
+  subcategoryId?: number | null;
   /**
    * @nullable
    */

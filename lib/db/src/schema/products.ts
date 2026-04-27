@@ -12,6 +12,7 @@ export const productsTable = pgTable("products", {
   imageUrl: text("image_url"),
   images: text("images").array().notNull().default([]),
   categoryId: integer("category_id").references(() => categoriesTable.id, { onDelete: "set null" }),
+  subcategoryId: integer("subcategory_id"),
   inStock: boolean("in_stock").notNull().default(true),
   isFeatured: boolean("is_featured").notNull().default(false),
   sizes: text("sizes").array().notNull().default([]),

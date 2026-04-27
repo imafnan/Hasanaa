@@ -2,14 +2,15 @@ import { Link, useLocation } from "wouter";
 import { useAdmin } from "@/lib/admin-context";
 import { useAdminLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { 
-  LayoutDashboard, 
-  Image as ImageIcon, 
-  Tags, 
-  Package, 
-  ShoppingCart, 
+import {
+  LayoutDashboard,
+  Image as ImageIcon,
+  Tags,
+  Package,
+  ShoppingCart,
   LogOut,
-  Menu
+  Menu,
+  Layers,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/banners", label: "Banners", icon: ImageIcon },
+  { href: "/admin/promotions", label: "Promotions", icon: Layers },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -69,8 +71,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
       ))}
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         className="justify-start px-3 py-2 text-destructive hover:text-destructive hover:bg-destructive/10 w-full mt-auto"
         onClick={handleLogout}
       >
@@ -82,7 +84,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card h-screen sticky top-0">
         <div className="p-6 border-b border-border">
           <Link href="/admin" className="text-2xl font-serif font-bold text-primary">Hasanaa Admin</Link>
@@ -92,7 +93,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      {/* Mobile Header */}
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="md:hidden sticky top-0 z-40 w-full border-b border-border bg-card px-4 h-16 flex items-center justify-between">
           <Link href="/admin" className="text-xl font-serif font-bold text-primary">Hasanaa Admin</Link>
@@ -114,7 +114,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           </Sheet>
         </header>
 
-        {/* Main Content */}
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
           {children}
         </main>

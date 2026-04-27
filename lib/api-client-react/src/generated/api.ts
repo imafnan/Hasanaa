@@ -25,19 +25,27 @@ import type {
   CreateCategoryBody,
   CreateOrderBody,
   CreateProductBody,
+  CreatePromotionBody,
+  CreateSubcategoryBody,
   ErrorResponse,
   HealthStatus,
   ListProductsParams,
+  ListSubcategoriesParams,
   LoginBody,
   LoginResponse,
   Order,
   OrderStats,
   Product,
+  Promotion,
+  Subcategory,
+  SubcategoryWithProducts,
   SuccessResponse,
   UpdateBannerBody,
   UpdateCategoryBody,
   UpdateOrderStatusBody,
   UpdateProductBody,
+  UpdatePromotionBody,
+  UpdateSubcategoryBody,
   UploadImageBody,
   UploadImageResponse,
 } from "./api.schemas";
@@ -945,7 +953,7 @@ export const useCreateCategory = <
 };
 
 /**
- * @summary Get a category with its products
+ * @summary Get a category with its products and subcategories
  */
 export const getGetCategoryUrl = (id: number) => {
   return `/api/categories/${id}`;
@@ -1005,7 +1013,7 @@ export type GetCategoryQueryResult = NonNullable<
 export type GetCategoryQueryError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Get a category with its products
+ * @summary Get a category with its products and subcategories
  */
 
 export function useGetCategory<
@@ -1200,6 +1208,447 @@ export const useDeleteCategory = <
   TContext
 > => {
   return useMutation(getDeleteCategoryMutationOptions(options));
+};
+
+/**
+ * @summary List subcategories, optionally filtered by categoryId
+ */
+export const getListSubcategoriesUrl = (params?: ListSubcategoriesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/subcategories?${stringifiedParams}`
+    : `/api/subcategories`;
+};
+
+export const listSubcategories = async (
+  params?: ListSubcategoriesParams,
+  options?: RequestInit,
+): Promise<Subcategory[]> => {
+  return customFetch<Subcategory[]>(getListSubcategoriesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSubcategoriesQueryKey = (
+  params?: ListSubcategoriesParams,
+) => {
+  return [`/api/subcategories`, ...(params ? [params] : [])] as const;
+};
+
+export const getListSubcategoriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSubcategories>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListSubcategoriesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listSubcategories>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListSubcategoriesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listSubcategories>>
+  > = ({ signal }) => listSubcategories(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSubcategories>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListSubcategoriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSubcategories>>
+>;
+export type ListSubcategoriesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List subcategories, optionally filtered by categoryId
+ */
+
+export function useListSubcategories<
+  TData = Awaited<ReturnType<typeof listSubcategories>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListSubcategoriesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listSubcategories>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSubcategoriesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a subcategory
+ */
+export const getCreateSubcategoryUrl = () => {
+  return `/api/subcategories`;
+};
+
+export const createSubcategory = async (
+  createSubcategoryBody: CreateSubcategoryBody,
+  options?: RequestInit,
+): Promise<Subcategory> => {
+  return customFetch<Subcategory>(getCreateSubcategoryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createSubcategoryBody),
+  });
+};
+
+export const getCreateSubcategoryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSubcategory>>,
+    TError,
+    { data: BodyType<CreateSubcategoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSubcategory>>,
+  TError,
+  { data: BodyType<CreateSubcategoryBody> },
+  TContext
+> => {
+  const mutationKey = ["createSubcategory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSubcategory>>,
+    { data: BodyType<CreateSubcategoryBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSubcategory(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSubcategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSubcategory>>
+>;
+export type CreateSubcategoryMutationBody = BodyType<CreateSubcategoryBody>;
+export type CreateSubcategoryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a subcategory
+ */
+export const useCreateSubcategory = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSubcategory>>,
+    TError,
+    { data: BodyType<CreateSubcategoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createSubcategory>>,
+  TError,
+  { data: BodyType<CreateSubcategoryBody> },
+  TContext
+> => {
+  return useMutation(getCreateSubcategoryMutationOptions(options));
+};
+
+/**
+ * @summary Get a subcategory with its products
+ */
+export const getGetSubcategoryUrl = (id: number) => {
+  return `/api/subcategories/${id}`;
+};
+
+export const getSubcategory = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SubcategoryWithProducts> => {
+  return customFetch<SubcategoryWithProducts>(getGetSubcategoryUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSubcategoryQueryKey = (id: number) => {
+  return [`/api/subcategories/${id}`] as const;
+};
+
+export const getGetSubcategoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSubcategory>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSubcategory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSubcategoryQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSubcategory>>> = ({
+    signal,
+  }) => getSubcategory(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSubcategory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSubcategoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSubcategory>>
+>;
+export type GetSubcategoryQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a subcategory with its products
+ */
+
+export function useGetSubcategory<
+  TData = Awaited<ReturnType<typeof getSubcategory>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSubcategory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSubcategoryQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a subcategory
+ */
+export const getUpdateSubcategoryUrl = (id: number) => {
+  return `/api/subcategories/${id}`;
+};
+
+export const updateSubcategory = async (
+  id: number,
+  updateSubcategoryBody: UpdateSubcategoryBody,
+  options?: RequestInit,
+): Promise<Subcategory> => {
+  return customFetch<Subcategory>(getUpdateSubcategoryUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateSubcategoryBody),
+  });
+};
+
+export const getUpdateSubcategoryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSubcategory>>,
+    TError,
+    { id: number; data: BodyType<UpdateSubcategoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSubcategory>>,
+  TError,
+  { id: number; data: BodyType<UpdateSubcategoryBody> },
+  TContext
+> => {
+  const mutationKey = ["updateSubcategory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSubcategory>>,
+    { id: number; data: BodyType<UpdateSubcategoryBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateSubcategory(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSubcategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSubcategory>>
+>;
+export type UpdateSubcategoryMutationBody = BodyType<UpdateSubcategoryBody>;
+export type UpdateSubcategoryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a subcategory
+ */
+export const useUpdateSubcategory = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSubcategory>>,
+    TError,
+    { id: number; data: BodyType<UpdateSubcategoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateSubcategory>>,
+  TError,
+  { id: number; data: BodyType<UpdateSubcategoryBody> },
+  TContext
+> => {
+  return useMutation(getUpdateSubcategoryMutationOptions(options));
+};
+
+/**
+ * @summary Delete a subcategory
+ */
+export const getDeleteSubcategoryUrl = (id: number) => {
+  return `/api/subcategories/${id}`;
+};
+
+export const deleteSubcategory = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteSubcategoryUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteSubcategoryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSubcategory>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteSubcategory>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteSubcategory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteSubcategory>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteSubcategory(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteSubcategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteSubcategory>>
+>;
+
+export type DeleteSubcategoryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a subcategory
+ */
+export const useDeleteSubcategory = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSubcategory>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteSubcategory>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteSubcategoryMutationOptions(options));
 };
 
 /**
@@ -2045,6 +2494,425 @@ export function useGetOrderStats<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List all promotion blocks
+ */
+export const getListPromotionsUrl = () => {
+  return `/api/promotions`;
+};
+
+export const listPromotions = async (
+  options?: RequestInit,
+): Promise<Promotion[]> => {
+  return customFetch<Promotion[]>(getListPromotionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPromotionsQueryKey = () => {
+  return [`/api/promotions`] as const;
+};
+
+export const getListPromotionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPromotions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPromotions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPromotionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPromotions>>> = ({
+    signal,
+  }) => listPromotions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPromotions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPromotionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPromotions>>
+>;
+export type ListPromotionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all promotion blocks
+ */
+
+export function useListPromotions<
+  TData = Awaited<ReturnType<typeof listPromotions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPromotions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPromotionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a promotion block
+ */
+export const getCreatePromotionUrl = () => {
+  return `/api/promotions`;
+};
+
+export const createPromotion = async (
+  createPromotionBody: CreatePromotionBody,
+  options?: RequestInit,
+): Promise<Promotion> => {
+  return customFetch<Promotion>(getCreatePromotionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createPromotionBody),
+  });
+};
+
+export const getCreatePromotionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPromotion>>,
+    TError,
+    { data: BodyType<CreatePromotionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPromotion>>,
+  TError,
+  { data: BodyType<CreatePromotionBody> },
+  TContext
+> => {
+  const mutationKey = ["createPromotion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPromotion>>,
+    { data: BodyType<CreatePromotionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPromotion(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePromotionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPromotion>>
+>;
+export type CreatePromotionMutationBody = BodyType<CreatePromotionBody>;
+export type CreatePromotionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a promotion block
+ */
+export const useCreatePromotion = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPromotion>>,
+    TError,
+    { data: BodyType<CreatePromotionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPromotion>>,
+  TError,
+  { data: BodyType<CreatePromotionBody> },
+  TContext
+> => {
+  return useMutation(getCreatePromotionMutationOptions(options));
+};
+
+/**
+ * @summary Get a promotion block
+ */
+export const getGetPromotionUrl = (id: number) => {
+  return `/api/promotions/${id}`;
+};
+
+export const getPromotion = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Promotion> => {
+  return customFetch<Promotion>(getGetPromotionUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPromotionQueryKey = (id: number) => {
+  return [`/api/promotions/${id}`] as const;
+};
+
+export const getGetPromotionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPromotion>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPromotion>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPromotionQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPromotion>>> = ({
+    signal,
+  }) => getPromotion(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPromotion>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPromotionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPromotion>>
+>;
+export type GetPromotionQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a promotion block
+ */
+
+export function useGetPromotion<
+  TData = Awaited<ReturnType<typeof getPromotion>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPromotion>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPromotionQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a promotion block
+ */
+export const getUpdatePromotionUrl = (id: number) => {
+  return `/api/promotions/${id}`;
+};
+
+export const updatePromotion = async (
+  id: number,
+  updatePromotionBody: UpdatePromotionBody,
+  options?: RequestInit,
+): Promise<Promotion> => {
+  return customFetch<Promotion>(getUpdatePromotionUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updatePromotionBody),
+  });
+};
+
+export const getUpdatePromotionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePromotion>>,
+    TError,
+    { id: number; data: BodyType<UpdatePromotionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePromotion>>,
+  TError,
+  { id: number; data: BodyType<UpdatePromotionBody> },
+  TContext
+> => {
+  const mutationKey = ["updatePromotion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePromotion>>,
+    { id: number; data: BodyType<UpdatePromotionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updatePromotion(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePromotionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePromotion>>
+>;
+export type UpdatePromotionMutationBody = BodyType<UpdatePromotionBody>;
+export type UpdatePromotionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a promotion block
+ */
+export const useUpdatePromotion = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePromotion>>,
+    TError,
+    { id: number; data: BodyType<UpdatePromotionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePromotion>>,
+  TError,
+  { id: number; data: BodyType<UpdatePromotionBody> },
+  TContext
+> => {
+  return useMutation(getUpdatePromotionMutationOptions(options));
+};
+
+/**
+ * @summary Delete a promotion block
+ */
+export const getDeletePromotionUrl = (id: number) => {
+  return `/api/promotions/${id}`;
+};
+
+export const deletePromotion = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeletePromotionUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeletePromotionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePromotion>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePromotion>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deletePromotion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deletePromotion>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deletePromotion(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeletePromotionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deletePromotion>>
+>;
+
+export type DeletePromotionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a promotion block
+ */
+export const useDeletePromotion = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePromotion>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deletePromotion>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeletePromotionMutationOptions(options));
+};
 
 /**
  * @summary Upload an image (base64)

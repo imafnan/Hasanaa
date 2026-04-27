@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, productsTable, categoriesTable } from "@workspace/db";
+import { db, productsTable, categoriesTable, subcategoriesTable } from "@workspace/db";
 import {
   CreateProductBody,
   UpdateProductBody,
@@ -14,7 +14,11 @@ import {
 
 const router: IRouter = Router();
 
-function formatProduct(p: typeof productsTable.$inferSelect, categoryName?: string | null) {
+function formatProduct(
+  p: typeof productsTable.$inferSelect,
+  categoryName?: string | null,
+  subcategoryName?: string | null,
+) {
   return {
     id: p.id,
     name: p.name,
@@ -25,6 +29,8 @@ function formatProduct(p: typeof productsTable.$inferSelect, categoryName?: stri
     images: p.images ?? [],
     categoryId: p.categoryId ?? null,
     categoryName: categoryName ?? null,
+    subcategoryId: p.subcategoryId ?? null,
+    subcategoryName: subcategoryName ?? null,
     inStock: p.inStock,
     isFeatured: p.isFeatured,
     sizes: p.sizes ?? [],
@@ -41,24 +47,29 @@ router.get("/products", async (req, res): Promise<void> => {
     return;
   }
 
-  const { categoryId, featured } = queryParams.data;
+  const { categoryId, subcategoryId, featured } = queryParams.data as any;
 
   const conditions = [];
-  if (categoryId != null) conditions.push(eq(productsTable.categoryId, categoryId));
+  if (categoryId != null) conditions.push(eq(productsTable.categoryId, Number(categoryId)));
+  if (subcategoryId != null) conditions.push(eq(productsTable.subcategoryId, Number(subcategoryId)));
   if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
 
   const products = conditions.length > 0
-    ? await db.select({ product: productsTable, categoryName: categoriesTable.name })
+    ? await db.select({ product: productsTable, categoryName: categoriesTable.name, subcategoryName: subcategoriesTable.name })
         .from(productsTable)
         .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+        .leftJoin(subcategoriesTable, eq(productsTable.subcategoryId, subcategoriesTable.id))
         .where(and(...conditions))
         .orderBy(productsTable.createdAt)
-    : await db.select({ product: productsTable, categoryName: categoriesTable.name })
+    : await db.select({ product: productsTable, categoryName: categoriesTable.name, subcategoryName: subcategoriesTable.name })
         .from(productsTable)
         .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+        .leftJoin(subcategoriesTable, eq(productsTable.subcategoryId, subcategoriesTable.id))
         .orderBy(productsTable.createdAt);
 
-  res.json(ListProductsResponse.parse(products.map(({ product, categoryName }) => formatProduct(product, categoryName))));
+  res.json(ListProductsResponse.parse(products.map(({ product, categoryName, subcategoryName }) =>
+    formatProduct(product, categoryName, subcategoryName)
+  )));
 });
 
 router.post("/products", async (req, res): Promise<void> => {
@@ -76,6 +87,7 @@ router.post("/products", async (req, res): Promise<void> => {
     imageUrl: parsed.data.imageUrl ?? null,
     images: parsed.data.images ?? [],
     categoryId: parsed.data.categoryId ?? null,
+    subcategoryId: (parsed.data as any).subcategoryId ?? null,
     inStock: parsed.data.inStock ?? true,
     isFeatured: parsed.data.isFeatured ?? false,
     sizes: parsed.data.sizes ?? [],
@@ -83,12 +95,17 @@ router.post("/products", async (req, res): Promise<void> => {
   }).returning();
 
   let categoryName: string | null = null;
+  let subcategoryName: string | null = null;
   if (product.categoryId) {
     const [cat] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, product.categoryId));
     categoryName = cat?.name ?? null;
   }
+  if (product.subcategoryId) {
+    const [sub] = await db.select().from(subcategoriesTable).where(eq(subcategoriesTable.id, product.subcategoryId));
+    subcategoryName = sub?.name ?? null;
+  }
 
-  res.status(201).json(GetProductResponse.parse(formatProduct(product, categoryName)));
+  res.status(201).json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName)));
 });
 
 router.get("/products/:id", async (req, res): Promise<void> => {
@@ -98,9 +115,10 @@ router.get("/products/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const result = await db.select({ product: productsTable, categoryName: categoriesTable.name })
+  const result = await db.select({ product: productsTable, categoryName: categoriesTable.name, subcategoryName: subcategoriesTable.name })
     .from(productsTable)
     .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .leftJoin(subcategoriesTable, eq(productsTable.subcategoryId, subcategoriesTable.id))
     .where(eq(productsTable.id, params.data.id));
 
   if (result.length === 0) {
@@ -108,8 +126,8 @@ router.get("/products/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const { product, categoryName } = result[0];
-  res.json(GetProductResponse.parse(formatProduct(product, categoryName)));
+  const { product, categoryName, subcategoryName } = result[0];
+  res.json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName)));
 });
 
 router.patch("/products/:id", async (req, res): Promise<void> => {
@@ -133,6 +151,7 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
   if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
   if (parsed.data.images != null) updateData.images = parsed.data.images;
   if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
+  if ((parsed.data as any).subcategoryId !== undefined) updateData.subcategoryId = (parsed.data as any).subcategoryId;
   if (parsed.data.inStock != null) updateData.inStock = parsed.data.inStock;
   if (parsed.data.isFeatured != null) updateData.isFeatured = parsed.data.isFeatured;
   if (parsed.data.sizes != null) updateData.sizes = parsed.data.sizes;
@@ -145,12 +164,17 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
   }
 
   let categoryName: string | null = null;
+  let subcategoryName: string | null = null;
   if (product.categoryId) {
     const [cat] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, product.categoryId));
     categoryName = cat?.name ?? null;
   }
+  if (product.subcategoryId) {
+    const [sub] = await db.select().from(subcategoriesTable).where(eq(subcategoriesTable.id, product.subcategoryId));
+    subcategoryName = sub?.name ?? null;
+  }
 
-  res.json(GetProductResponse.parse(formatProduct(product, categoryName)));
+  res.json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName)));
 });
 
 router.delete("/products/:id", async (req, res): Promise<void> => {

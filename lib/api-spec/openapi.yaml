@@ -16,10 +16,14 @@ tags:
     description: Banner management
   - name: categories
     description: Category management
+  - name: subcategories
+    description: Subcategory management
   - name: products
     description: Product management
   - name: orders
     description: Order management
+  - name: promotions
+    description: Promotion block management
   - name: upload
     description: File upload
 
@@ -223,7 +227,7 @@ paths:
     get:
       operationId: getCategory
       tags: [categories]
-      summary: Get a category with its products
+      summary: Get a category with its products and subcategories
       parameters:
         - name: id
           in: path
@@ -280,6 +284,105 @@ paths:
         "204":
           description: Category deleted
 
+  /subcategories:
+    get:
+      operationId: listSubcategories
+      tags: [subcategories]
+      summary: List subcategories, optionally filtered by categoryId
+      parameters:
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of subcategories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subcategory"
+    post:
+      operationId: createSubcategory
+      tags: [subcategories]
+      summary: Create a subcategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubcategoryBody"
+      responses:
+        "201":
+          description: Subcategory created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subcategory"
+
+  /subcategories/{id}:
+    get:
+      operationId: getSubcategory
+      tags: [subcategories]
+      summary: Get a subcategory with its products
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Subcategory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubcategoryWithProducts"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateSubcategory
+      tags: [subcategories]
+      summary: Update a subcategory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubcategoryBody"
+      responses:
+        "200":
+          description: Subcategory updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subcategory"
+    delete:
+      operationId: deleteSubcategory
+      tags: [subcategories]
+      summary: Delete a subcategory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Subcategory deleted
+
   /products:
     get:
       operationId: listProducts
@@ -287,6 +390,11 @@ paths:
       summary: List all products
       parameters:
         - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: subcategoryId
           in: query
           required: false
           schema:
@@ -477,6 +585,99 @@ paths:
               schema:
                 $ref: "#/components/schemas/OrderStats"
 
+  /promotions:
+    get:
+      operationId: listPromotions
+      tags: [promotions]
+      summary: List all promotion blocks
+      responses:
+        "200":
+          description: List of promotions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Promotion"
+    post:
+      operationId: createPromotion
+      tags: [promotions]
+      summary: Create a promotion block
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePromotionBody"
+      responses:
+        "201":
+          description: Promotion created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Promotion"
+
+  /promotions/{id}:
+    get:
+      operationId: getPromotion
+      tags: [promotions]
+      summary: Get a promotion block
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Promotion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Promotion"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updatePromotion
+      tags: [promotions]
+      summary: Update a promotion block
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePromotionBody"
+      responses:
+        "200":
+          description: Promotion updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Promotion"
+    delete:
+      operationId: deletePromotion
+      tags: [promotions]
+      summary: Delete a promotion block
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Promotion deleted
+
   /upload/image:
     post:
       operationId: uploadImage
@@ -568,6 +769,12 @@ components:
           type: string
         linkUrl:
           type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        subcategoryId:
+          type: ["integer", "null"]
+        position:
+          type: string
         isActive:
           type: boolean
         sortOrder:
@@ -582,6 +789,9 @@ components:
         - subtitle
         - imageUrl
         - linkUrl
+        - categoryId
+        - subcategoryId
+        - position
         - isActive
         - sortOrder
         - createdAt
@@ -598,6 +808,12 @@ components:
           type: string
         linkUrl:
           type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        subcategoryId:
+          type: ["integer", "null"]
+        position:
+          type: string
         isActive:
           type: boolean
         sortOrder:
@@ -616,6 +832,12 @@ components:
         imageUrl:
           type: ["string", "null"]
         linkUrl:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        subcategoryId:
+          type: ["integer", "null"]
+        position:
           type: ["string", "null"]
         isActive:
           type: ["boolean", "null"]
@@ -675,6 +897,10 @@ components:
           type: string
         updatedAt:
           type: string
+        subcategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subcategory"
         products:
           type: array
           items:
@@ -689,6 +915,7 @@ components:
         - sortOrder
         - createdAt
         - updatedAt
+        - subcategories
         - products
 
     CreateCategoryBody:
@@ -726,6 +953,202 @@ components:
         sortOrder:
           type: ["integer", "null"]
 
+    Subcategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        categoryId:
+          type: integer
+        imageUrl:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - slug
+        - categoryId
+        - imageUrl
+        - isActive
+        - sortOrder
+        - createdAt
+        - updatedAt
+
+    SubcategoryWithProducts:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        categoryId:
+          type: integer
+        imageUrl:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+      required:
+        - id
+        - name
+        - slug
+        - categoryId
+        - imageUrl
+        - isActive
+        - sortOrder
+        - createdAt
+        - updatedAt
+        - products
+
+    CreateSubcategoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        categoryId:
+          type: integer
+        imageUrl:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+      required:
+        - name
+        - slug
+        - categoryId
+
+    UpdateSubcategoryBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        slug:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        isActive:
+          type: ["boolean", "null"]
+        sortOrder:
+          type: ["integer", "null"]
+
+    PromotionItem:
+      type: object
+      properties:
+        imageUrl:
+          type: string
+        label:
+          type: string
+        categoryId:
+          type: ["integer", "null"]
+        subcategoryId:
+          type: ["integer", "null"]
+      required:
+        - imageUrl
+        - label
+
+    Promotion:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        gridType:
+          type: integer
+          description: "2 for 2-column grid, 4 for 4-column grid"
+        position:
+          type: string
+          description: "top or bottom"
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PromotionItem"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - gridType
+        - position
+        - isActive
+        - sortOrder
+        - items
+        - createdAt
+        - updatedAt
+
+    CreatePromotionBody:
+      type: object
+      properties:
+        title:
+          type: string
+        gridType:
+          type: integer
+        position:
+          type: string
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PromotionItem"
+      required:
+        - title
+        - gridType
+        - position
+
+    UpdatePromotionBody:
+      type: object
+      properties:
+        title:
+          type: ["string", "null"]
+        gridType:
+          type: ["integer", "null"]
+        position:
+          type: ["string", "null"]
+        isActive:
+          type: ["boolean", "null"]
+        sortOrder:
+          type: ["integer", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PromotionItem"
+
     Product:
       type: object
       properties:
@@ -748,6 +1171,10 @@ components:
         categoryId:
           type: ["integer", "null"]
         categoryName:
+          type: ["string", "null"]
+        subcategoryId:
+          type: ["integer", "null"]
+        subcategoryName:
           type: ["string", "null"]
         inStock:
           type: boolean
@@ -775,6 +1202,8 @@ components:
         - images
         - categoryId
         - categoryName
+        - subcategoryId
+        - subcategoryName
         - inStock
         - isFeatured
         - sizes
@@ -800,6 +1229,8 @@ components:
           items:
             type: string
         categoryId:
+          type: ["integer", "null"]
+        subcategoryId:
           type: ["integer", "null"]
         inStock:
           type: boolean
@@ -835,6 +1266,8 @@ components:
           items:
             type: string
         categoryId:
+          type: ["integer", "null"]
+        subcategoryId:
           type: ["integer", "null"]
         inStock:
           type: ["boolean", "null"]

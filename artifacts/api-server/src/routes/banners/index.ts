@@ -13,18 +13,22 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/banners", async (_req, res): Promise<void> => {
-  const banners = await db
-    .select()
-    .from(bannersTable)
-    .orderBy(bannersTable.sortOrder, bannersTable.createdAt);
-  res.json(ListBannersResponse.parse(banners.map(b => ({
+function formatBanner(b: typeof bannersTable.$inferSelect) {
+  return {
     ...b,
     subtitle: b.subtitle ?? null,
     linkUrl: b.linkUrl ?? null,
+    categoryId: b.categoryId ?? null,
+    subcategoryId: b.subcategoryId ?? null,
+    position: b.position ?? "top",
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
-  }))));
+  };
+}
+
+router.get("/banners", async (_req, res): Promise<void> => {
+  const banners = await db.select().from(bannersTable).orderBy(bannersTable.sortOrder, bannersTable.createdAt);
+  res.json(ListBannersResponse.parse(banners.map(formatBanner)));
 });
 
 router.post("/banners", async (req, res): Promise<void> => {
@@ -39,17 +43,14 @@ router.post("/banners", async (req, res): Promise<void> => {
     subtitle: parsed.data.subtitle ?? null,
     imageUrl: parsed.data.imageUrl,
     linkUrl: parsed.data.linkUrl ?? null,
+    categoryId: (parsed.data as any).categoryId ?? null,
+    subcategoryId: (parsed.data as any).subcategoryId ?? null,
+    position: (parsed.data as any).position ?? "top",
     isActive: parsed.data.isActive ?? true,
     sortOrder: parsed.data.sortOrder ?? 0,
   }).returning();
 
-  res.status(201).json(GetBannerResponse.parse({
-    ...banner,
-    subtitle: banner.subtitle ?? null,
-    linkUrl: banner.linkUrl ?? null,
-    createdAt: banner.createdAt.toISOString(),
-    updatedAt: banner.updatedAt.toISOString(),
-  }));
+  res.status(201).json(GetBannerResponse.parse(formatBanner(banner)));
 });
 
 router.get("/banners/:id", async (req, res): Promise<void> => {
@@ -65,13 +66,7 @@ router.get("/banners/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetBannerResponse.parse({
-    ...banner,
-    subtitle: banner.subtitle ?? null,
-    linkUrl: banner.linkUrl ?? null,
-    createdAt: banner.createdAt.toISOString(),
-    updatedAt: banner.updatedAt.toISOString(),
-  }));
+  res.json(GetBannerResponse.parse(formatBanner(banner)));
 });
 
 router.patch("/banners/:id", async (req, res): Promise<void> => {
@@ -92,6 +87,9 @@ router.patch("/banners/:id", async (req, res): Promise<void> => {
   if (parsed.data.subtitle !== undefined) updateData.subtitle = parsed.data.subtitle;
   if (parsed.data.imageUrl != null) updateData.imageUrl = parsed.data.imageUrl;
   if (parsed.data.linkUrl !== undefined) updateData.linkUrl = parsed.data.linkUrl;
+  if ((parsed.data as any).categoryId !== undefined) updateData.categoryId = (parsed.data as any).categoryId;
+  if ((parsed.data as any).subcategoryId !== undefined) updateData.subcategoryId = (parsed.data as any).subcategoryId;
+  if ((parsed.data as any).position != null) updateData.position = (parsed.data as any).position;
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
   if (parsed.data.sortOrder != null) updateData.sortOrder = parsed.data.sortOrder;
 
@@ -101,13 +99,7 @@ router.patch("/banners/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetBannerResponse.parse({
-    ...banner,
-    subtitle: banner.subtitle ?? null,
-    linkUrl: banner.linkUrl ?? null,
-    createdAt: banner.createdAt.toISOString(),
-    updatedAt: banner.updatedAt.toISOString(),
-  }));
+  res.json(GetBannerResponse.parse(formatBanner(banner)));
 });
 
 router.delete("/banners/:id", async (req, res): Promise<void> => {

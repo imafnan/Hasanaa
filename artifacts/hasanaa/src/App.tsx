@@ -12,6 +12,7 @@ import { AdminLayout } from "@/components/layout/admin-layout";
 
 import Home from "@/pages/home";
 import CategoryPage from "@/pages/category";
+import SubcategoryPage from "@/pages/subcategory";
 import ProductPage from "@/pages/product";
 import CartPage from "@/pages/cart";
 import CheckoutPage from "@/pages/checkout";
@@ -24,6 +25,7 @@ import AdminCategories from "@/pages/admin/categories";
 import AdminProducts from "@/pages/admin/products";
 import AdminOrders from "@/pages/admin/orders";
 import AdminOrderDetails from "@/pages/admin/order-details";
+import AdminPromotions from "@/pages/admin/promotions";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +43,7 @@ function StoreRoutes() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/category/:id" component={CategoryPage} />
+        <Route path="/subcategory/:id" component={SubcategoryPage} />
         <Route path="/product/:id" component={ProductPage} />
         <Route path="/cart" component={CartPage} />
         <Route path="/checkout" component={CheckoutPage} />
@@ -62,6 +65,7 @@ function AdminRoutes() {
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin/orders" component={AdminOrders} />
         <Route path="/admin/orders/:id" component={AdminOrderDetails} />
+        <Route path="/admin/promotions" component={AdminPromotions} />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>

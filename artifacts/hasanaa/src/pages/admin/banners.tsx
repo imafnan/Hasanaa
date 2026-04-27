@@ -1,21 +1,32 @@
 import { useState } from "react";
-import { useListBanners, getListBannersQueryKey, useCreateBanner, useUpdateBanner, useDeleteBanner } from "@workspace/api-client-react";
+import {
+  useListBanners, getListBannersQueryKey, useCreateBanner, useUpdateBanner, useDeleteBanner,
+  useListCategories, getListCategoriesQueryKey,
+  useListSubcategories, getListSubcategoriesQueryKey,
+} from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 
+const POSITION_OPTIONS = [
+  { value: "hero", label: "Hero (Main Carousel)" },
+  { value: "mid", label: "Mid-Page" },
+  { value: "bottom", label: "Bottom" },
+];
+
 export default function AdminBanners() {
-  const { data: banners, isLoading } = useListBanners({
-    query: { queryKey: getListBannersQueryKey() }
-  });
-  
+  const { data: banners, isLoading } = useListBanners({ query: { queryKey: getListBannersQueryKey() } });
+  const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
+  const { data: allSubcategories } = useListSubcategories({}, { query: { queryKey: getListSubcategoriesQueryKey({}) } });
+
   const createBanner = useCreateBanner();
   const updateBanner = useUpdateBanner();
   const deleteBanner = useDeleteBanner();
@@ -24,34 +35,33 @@ export default function AdminBanners() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  
-  // Form state
+
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
+  const [position, setPosition] = useState("hero");
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [subcategoryId, setSubcategoryId] = useState<string>("");
   const [isActive, setIsActive] = useState(true);
-  const [sortOrder, setSortOrder] = useState(0);
+  const [sortOrder, setSortOrder] = useState("0");
+
+  const filteredSubcategories = allSubcategories?.filter(s => !categoryId || s.categoryId === parseInt(categoryId)) || [];
 
   const resetForm = () => {
-    setTitle("");
-    setSubtitle("");
-    setImageUrl("");
-    setLinkUrl("");
-    setIsActive(true);
-    setSortOrder(0);
-    setEditingId(null);
+    setTitle(""); setSubtitle(""); setImageUrl(""); setLinkUrl("");
+    setPosition("hero"); setCategoryId(""); setSubcategoryId("");
+    setIsActive(true); setSortOrder("0"); setEditingId(null);
   };
 
   const handleOpenDialog = (banner?: any) => {
     if (banner) {
-      setEditingId(banner.id);
-      setTitle(banner.title);
-      setSubtitle(banner.subtitle || "");
-      setImageUrl(banner.imageUrl);
-      setLinkUrl(banner.linkUrl || "");
-      setIsActive(banner.isActive);
-      setSortOrder(banner.sortOrder);
+      setEditingId(banner.id); setTitle(banner.title); setSubtitle(banner.subtitle || "");
+      setImageUrl(banner.imageUrl); setLinkUrl(banner.linkUrl || "");
+      setPosition(banner.position || "hero");
+      setCategoryId(banner.categoryId ? String(banner.categoryId) : "");
+      setSubcategoryId(banner.subcategoryId ? String(banner.subcategoryId) : "");
+      setIsActive(banner.isActive); setSortOrder(String(banner.sortOrder));
     } else {
       resetForm();
     }
@@ -60,57 +70,25 @@ export default function AdminBanners() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!title || !imageUrl) {
-      toast({ title: "Validation Error", description: "Title and image are required.", variant: "destructive" });
-      return;
-    }
-
+    if (!title || !imageUrl) { toast({ title: "Title and image are required", variant: "destructive" }); return; }
     const payload = {
-      title,
-      subtitle: subtitle || null,
-      imageUrl,
-      linkUrl: linkUrl || null,
-      isActive,
-      sortOrder
+      title, subtitle: subtitle || null, imageUrl,
+      linkUrl: linkUrl || null, position,
+      categoryId: categoryId && categoryId !== "none" ? parseInt(categoryId) : null,
+      subcategoryId: subcategoryId && subcategoryId !== "none" ? parseInt(subcategoryId) : null,
+      isActive, sortOrder: parseInt(sortOrder) || 0,
     };
-
+    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListBannersQueryKey() }); toast({ title: editingId ? "Banner updated" : "Banner created" }); setIsDialogOpen(false); };
     if (editingId) {
-      updateBanner.mutate(
-        { id: editingId, data: payload },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: getListBannersQueryKey() });
-            toast({ title: "Banner updated successfully" });
-            setIsDialogOpen(false);
-          }
-        }
-      );
+      updateBanner.mutate({ id: editingId, data: payload }, { onSuccess });
     } else {
-      createBanner.mutate(
-        { data: payload },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: getListBannersQueryKey() });
-            toast({ title: "Banner created successfully" });
-            setIsDialogOpen(false);
-          }
-        }
-      );
+      createBanner.mutate({ data: payload }, { onSuccess });
     }
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this banner?")) {
-      deleteBanner.mutate(
-        { id },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: getListBannersQueryKey() });
-            toast({ title: "Banner deleted successfully" });
-          }
-        }
-      );
+    if (confirm("Delete this banner?")) {
+      deleteBanner.mutate({ id }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListBannersQueryKey() }); toast({ title: "Banner deleted" }); } });
     }
   };
 
@@ -121,11 +99,9 @@ export default function AdminBanners() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground">Banners</h1>
-          <p className="text-muted-foreground mt-1">Manage homepage carousel banners</p>
+          <p className="text-muted-foreground mt-1">Manage homepage banners</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="mr-2 h-4 w-4" /> Add Banner
-        </Button>
+        <Button onClick={() => handleOpenDialog()}><Plus className="mr-2 h-4 w-4" /> Add Banner</Button>
       </div>
 
       <div className="border border-border rounded-lg bg-card overflow-hidden">
@@ -134,6 +110,8 @@ export default function AdminBanners() {
             <TableRow>
               <TableHead className="w-24">Image</TableHead>
               <TableHead>Title</TableHead>
+              <TableHead>Position</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Order</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -141,105 +119,76 @@ export default function AdminBanners() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+            ) : !banners?.length ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No banners yet.</TableCell></TableRow>
+            ) : banners?.map((banner) => (
+              <TableRow key={banner.id}>
+                <TableCell>
+                  {banner.imageUrl ? <img src={banner.imageUrl} alt={banner.title} className="h-12 w-20 object-cover rounded bg-muted" /> : <div className="h-12 w-20 bg-muted rounded flex items-center justify-center"><ImageIcon className="h-4 w-4 text-muted-foreground" /></div>}
+                </TableCell>
+                <TableCell className="font-medium">{banner.title}</TableCell>
+                <TableCell className="text-sm capitalize">{(banner as any).position || "hero"}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{(banner as any).categoryId ? categories?.find(c => c.id === (banner as any).categoryId)?.name || "-" : "-"}</TableCell>
+                <TableCell>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${banner.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>{banner.isActive ? "Active" : "Inactive"}</span>
+                </TableCell>
+                <TableCell>{banner.sortOrder}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(banner)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(banner.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
-            ) : banners?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No banners found. Add one to get started.
-                </TableCell>
-              </TableRow>
-            ) : (
-              banners?.map((banner) => (
-                <TableRow key={banner.id}>
-                  <TableCell>
-                    {banner.imageUrl ? (
-                      <img src={banner.imageUrl} alt={banner.title} className="h-12 w-20 object-cover rounded bg-muted" />
-                    ) : (
-                      <div className="h-12 w-20 bg-muted rounded flex items-center justify-center">
-                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">{banner.title}</TableCell>
-                  <TableCell>
-                    {banner.isActive ? (
-                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
-                        Inactive
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>{banner.sortOrder}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(banner)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(banner.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Banner" : "Create New Banner"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-6 pt-4">
-            <div className="grid gap-4">
+          <DialogHeader><DialogTitle>{editingId ? "Edit Banner" : "Create Banner"}</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Title *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
+              <div className="space-y-2"><Label>Subtitle</Label><Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} /></div>
+            </div>
+            <div className="space-y-2">
+              <Label>Position</Label>
+              <Select value={position} onValueChange={setPosition}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{POSITION_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                <Label>Category (optional)</Label>
+                <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubcategoryId(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Any category" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {categories?.map(cat => <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="subtitle">Subtitle</Label>
-                <Input id="subtitle" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
-              </div>
-
-              <div className="space-y-2">
-                <ImageUpload 
-                  value={imageUrl} 
-                  onChange={setImageUrl} 
-                  label="Banner Image *" 
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="linkUrl">Link URL (Optional)</Label>
-                <Input id="linkUrl" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="/category/1" />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="active">Active Status</Label>
-                  <p className="text-sm text-muted-foreground">Show this banner on the home page</p>
-                </div>
-                <Switch id="active" checked={isActive} onCheckedChange={setIsActive} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sortOrder">Sort Order</Label>
-                <Input id="sortOrder" type="number" value={sortOrder} onChange={(e) => setSortOrder(parseInt(e.target.value) || 0)} />
+                <Label>Subcategory (optional)</Label>
+                <Select value={subcategoryId} onValueChange={setSubcategoryId} disabled={!categoryId || categoryId === "none"}>
+                  <SelectTrigger><SelectValue placeholder="Any subcategory" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {filteredSubcategories.map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
+            <ImageUpload value={imageUrl} onChange={setImageUrl} label="Banner Image *" />
+            <div className="space-y-2"><Label>Link URL (optional)</Label><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="/category/1" /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Sort Order</Label><Input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} /></div>
+              <div className="flex items-center gap-3 pt-6"><Switch checked={isActive} onCheckedChange={setIsActive} /><Label>Active</Label></div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editingId ? "Save Changes" : "Create Banner"}
