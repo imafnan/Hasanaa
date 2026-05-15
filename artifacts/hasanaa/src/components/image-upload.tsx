@@ -16,8 +16,8 @@ export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadPro
 
   const handleFileChange = async (file: File) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File is too large. Maximum size is 5MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File is too large. Maximum size is 10MB.");
       return;
     }
 
@@ -72,7 +72,7 @@ export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadPro
               <span className="text-primary hover:underline">Click to upload</span>{" "}
               or drag & drop
             </div>
-            <p className="text-xs">JPG, PNG, WEBP (max 5MB)</p>
+            <p className="text-xs">JPG, PNG, WEBP (max 10MB)</p>
             <input
               type="file"
               className="hidden"

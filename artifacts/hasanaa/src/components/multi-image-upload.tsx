@@ -17,8 +17,8 @@ export function MultiImageUpload({ values, onChange, label = "Images", maxImages
   const inputRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File): Promise<string | null> => {
-    if (file.size > 5 * 1024 * 1024) {
-      alert(`${file.name} is too large. Maximum size is 5MB.`);
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`${file.name} is too large. Maximum size is 10MB.`);
       return null;
     }
     return new Promise((resolve) => {
@@ -103,7 +103,7 @@ export function MultiImageUpload({ values, onChange, label = "Images", maxImages
             <p className="text-sm font-medium">
               <span className="text-primary">Click to upload</span> or drag & drop
             </p>
-            <p className="text-xs">Multiple files allowed · JPG, PNG, WEBP (max 5MB each)</p>
+            <p className="text-xs">Multiple files allowed · JPG, PNG, WEBP (max 10MB each)</p>
             {values.length > 0 && <p className="text-xs">{values.length}/{maxImages} images added</p>}
           </div>
           <input
