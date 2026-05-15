@@ -6,7 +6,6 @@ import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronRight, ChevronLeft, Minus, Plus, ShoppingCart, Ruler } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -23,7 +22,6 @@ export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [showSizeChart, setShowSizeChart] = useState(false);
 
   useEffect(() => {
     setActiveImageIndex(0);
@@ -107,13 +105,13 @@ export default function ProductPage() {
       <div className="grid md:grid-cols-2 gap-8 lg:gap-14">
         {/* Product Image Gallery */}
         <div className="flex flex-col items-center">
-          <div className="w-full max-w-[380px]">
+          <div className="w-full max-w-[420px]">
             {/* Main Image */}
-            <div className="relative aspect-[3/4] bg-muted rounded-xl overflow-hidden border border-border shadow group">
+            <div className="relative bg-muted rounded-xl overflow-hidden border border-border shadow group">
               {currentImage ? (
-                <img src={currentImage} alt={product.name} className="w-full h-full object-cover" />
+                <img src={currentImage} alt={product.name} className="w-full h-auto object-contain" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">No image</div>
+                <div className="w-full aspect-[3/4] flex items-center justify-center text-muted-foreground">No image</div>
               )}
               {allImages.length > 1 && (
                 <>
@@ -258,20 +256,8 @@ export default function ProductPage() {
 
             {product.sizes && product.sizes.length > 0 && (
               <div>
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Select Size</h3>
-                  {(product as any).sizeChartUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setShowSizeChart(true)}
-                      className="flex items-center gap-1 text-xs text-primary hover:underline"
-                    >
-                      <Ruler className="h-3 w-3" />
-                      Size Guide
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Select Size</h3>
+                <div className="flex flex-wrap gap-2 mb-4">
                   {product.sizes.map(size => (
                     <button
                       key={size}
@@ -286,6 +272,19 @@ export default function ProductPage() {
                     </button>
                   ))}
                 </div>
+                {(product as any).sizeChartUrl && (
+                  <div className="mt-2">
+                    <p className="flex items-center gap-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Ruler className="h-3 w-3" />
+                      Size Guide
+                    </p>
+                    <img
+                      src={(product as any).sizeChartUrl}
+                      alt="Size Guide"
+                      className="w-full rounded-lg border border-border"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -314,15 +313,6 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* Size Chart Dialog */}
-      {(product as any).sizeChartUrl && (
-        <Dialog open={showSizeChart} onOpenChange={setShowSizeChart}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader><DialogTitle>Size Guide</DialogTitle></DialogHeader>
-            <img src={(product as any).sizeChartUrl} alt="Size Chart" className="w-full rounded-lg" />
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }
