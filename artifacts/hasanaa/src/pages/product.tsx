@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, ChevronLeft, Minus, Plus, ShoppingCart, Ruler } from "lucide-react";
+import { ChevronRight, ChevronLeft, Minus, Plus, ShoppingCart, Ruler, ZoomIn } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -22,13 +23,26 @@ export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showSizeChart, setShowSizeChart] = useState(false);
+
+  // Zoom / pan state
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
   useEffect(() => {
     setActiveImageIndex(0);
     setSelectedSize(null);
     setSelectedColor(null);
     setQuantity(1);
+    setIsZoomed(false);
   }, [id]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomPos({ x, y });
+  };
 
   if (isLoading) {
     return (
@@ -65,6 +79,7 @@ export default function ProductPage() {
   const allImages = [product.imageUrl, ...(product.images || [])].filter(Boolean) as string[];
   const currentImage = allImages[activeImageIndex] ?? null;
   const variants = (product as any).variants || [];
+  const sizeChartUrl = (product as any).sizeChartUrl as string | undefined;
 
   const handleAddToCart = () => {
     if (product.sizes?.length && !selectedSize) { toast({ title: "Please select a size", variant: "destructive" }); return; }
@@ -106,35 +121,64 @@ export default function ProductPage() {
         {/* Product Image Gallery */}
         <div className="flex flex-col items-center">
           <div className="w-full max-w-[420px]">
-            {/* Main Image */}
-            <div className="relative bg-muted rounded-xl overflow-hidden border border-border shadow group">
+            {/* Main Image with zoom on hover */}
+            <div
+              className="relative bg-muted rounded-xl overflow-hidden border border-border shadow select-none"
+              style={{ cursor: isZoomed ? "crosshair" : "zoom-in" }}
+              onMouseEnter={() => setIsZoomed(true)}
+              onMouseLeave={() => setIsZoomed(false)}
+              onMouseMove={handleMouseMove}
+            >
               {currentImage ? (
-                <img src={currentImage} alt={product.name} className="w-full h-auto object-contain" />
+                <img
+                  src={currentImage}
+                  alt={product.name}
+                  className="w-full h-auto object-contain pointer-events-none"
+                  style={{
+                    transform: isZoomed ? "scale(2.2)" : "scale(1)",
+                    transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                    transition: isZoomed ? "transform 0.05s linear" : "transform 0.3s ease",
+                  }}
+                  draggable={false}
+                />
               ) : (
                 <div className="w-full aspect-[3/4] flex items-center justify-center text-muted-foreground">No image</div>
               )}
-              {allImages.length > 1 && (
+
+              {/* Prev/Next arrows — only visible when not zoomed */}
+              {!isZoomed && allImages.length > 1 && (
                 <>
                   <button
                     onClick={() => setActiveImageIndex(i => (i - 1 + allImages.length) % allImages.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center shadow transition-opacity"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setActiveImageIndex(i => (i + 1) % allImages.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center shadow transition-opacity"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </>
               )}
+
               {discountPct > 0 && (
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-3 left-3 pointer-events-none">
                   <Badge className="bg-destructive text-destructive-foreground text-xs font-bold">{discountPct}% OFF</Badge>
                 </div>
               )}
+
+              {/* Zoom hint */}
+              {!isZoomed && currentImage && (
+                <div className="absolute bottom-2 right-2 pointer-events-none">
+                  <div className="bg-background/70 rounded-full p-1.5">
+                    <ZoomIn className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                </div>
+              )}
             </div>
+
             {/* Thumbnails */}
             {allImages.length > 1 && (
               <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
@@ -151,7 +195,6 @@ export default function ProductPage() {
                 ))}
               </div>
             )}
-            {/* Image count indicator */}
             {allImages.length > 1 && (
               <p className="text-center text-xs text-muted-foreground mt-2">
                 {activeImageIndex + 1} / {allImages.length}
@@ -194,11 +237,8 @@ export default function ProductPage() {
           {/* Variants (color options via linked products) */}
           {variants.length > 0 && (
             <div className="mb-5">
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
-                {selectedColor ? `Color: ${selectedColor}` : "Color"}
-              </h3>
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Color</h3>
               <div className="flex flex-wrap gap-3">
-                {/* Current product as first swatch */}
                 <button
                   onClick={() => {}}
                   className="relative flex-shrink-0 w-[72px] aspect-[3/4] rounded-lg overflow-hidden border-2 border-primary shadow-md transition-all"
@@ -210,7 +250,6 @@ export default function ProductPage() {
                   )}
                   <div className="absolute inset-0 ring-2 ring-primary ring-inset rounded-lg" />
                 </button>
-                {/* Variant swatches */}
                 {variants.map((variant: any) => (
                   <button
                     key={variant.id}
@@ -230,7 +269,7 @@ export default function ProductPage() {
           )}
 
           <div className="space-y-5 mb-6">
-            {/* Color selection (text-based) — shown only if no variant images */}
+            {/* Color selection (text-based) */}
             {product.colors && product.colors.length > 0 && variants.length === 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
@@ -254,6 +293,7 @@ export default function ProductPage() {
               </div>
             )}
 
+            {/* Sizes + Size Chart */}
             {product.sizes && product.sizes.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Select Size</h3>
@@ -272,19 +312,43 @@ export default function ProductPage() {
                     </button>
                   ))}
                 </div>
-                {(product as any).sizeChartUrl && (
-                  <div className="mt-2">
-                    <p className="flex items-center gap-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      <Ruler className="h-3 w-3" />
-                      Size Guide
-                    </p>
+
+                {/* Size Chart — thumbnail always visible, click to enlarge */}
+                {sizeChartUrl && (
+                  <div
+                    className="relative border border-border rounded-lg overflow-hidden cursor-pointer group hover:border-primary transition-colors"
+                    onClick={() => setShowSizeChart(true)}
+                    title="Click to enlarge size guide"
+                  >
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+                      <Ruler className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Size Guide</span>
+                      <ZoomIn className="h-3.5 w-3.5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                     <img
-                      src={(product as any).sizeChartUrl}
+                      src={sizeChartUrl}
                       alt="Size Guide"
-                      className="w-full rounded-lg border border-border"
+                      className="w-full object-contain"
                     />
+                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Size chart for products with no sizes but has size chart */}
+            {(!product.sizes || product.sizes.length === 0) && sizeChartUrl && (
+              <div
+                className="relative border border-border rounded-lg overflow-hidden cursor-pointer group hover:border-primary transition-colors"
+                onClick={() => setShowSizeChart(true)}
+              >
+                <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+                  <Ruler className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Size Guide</span>
+                  <ZoomIn className="h-3.5 w-3.5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <img src={sizeChartUrl} alt="Size Guide" className="w-full object-contain" />
+                <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             )}
           </div>
@@ -313,6 +377,19 @@ export default function ProductPage() {
         </div>
       </div>
 
+      {/* Size Chart Dialog */}
+      {sizeChartUrl && (
+        <Dialog open={showSizeChart} onOpenChange={setShowSizeChart}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Ruler className="h-4 w-4" /> Size Guide
+              </DialogTitle>
+            </DialogHeader>
+            <img src={sizeChartUrl} alt="Size Chart" className="w-full rounded-lg" />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
