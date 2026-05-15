@@ -97,7 +97,7 @@ export default function Home() {
       {/* Hero Banner Carousel */}
       <section className="relative w-full">
         {loadingBanners ? (
-          <div className="w-full h-[45vw] md:h-screen bg-muted animate-pulse flex items-center justify-center">
+          <div className="w-full h-[70vw] md:h-screen bg-muted animate-pulse flex items-center justify-center">
             <span className="text-muted-foreground">Loading...</span>
           </div>
         ) : heroBanners.length > 0 ? (
@@ -106,7 +106,7 @@ export default function Home() {
               <div className="flex">
                 {heroBanners.map((banner) => (
                   <div key={banner.id} className="relative flex-[0_0_100%] min-w-0">
-                    <div className="w-full h-[45vw] md:h-screen relative">
+                    <div className="w-full h-[70vw] md:h-screen relative">
                       <img src={banner.imageUrl} alt={banner.title} className="absolute inset-0 w-full h-full object-contain md:object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
                       <div className="container mx-auto px-4 h-full flex flex-col justify-center relative z-10">
@@ -137,7 +137,7 @@ export default function Home() {
             )}
           </div>
         ) : (
-          <div className="w-full h-[45vw] md:h-screen relative">
+          <div className="w-full h-[70vw] md:h-screen relative">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20" />
             <div className="container mx-auto px-4 h-full flex flex-col justify-center relative z-10">
               <div className="max-w-xl">
