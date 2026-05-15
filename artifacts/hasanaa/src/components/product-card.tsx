@@ -11,7 +11,7 @@ export function ProductCard({ product }: { product: Product }) {
             <img 
               src={product.imageUrl} 
               alt={product.name} 
-              className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+              className="object-contain w-full h-full transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
