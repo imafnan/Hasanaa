@@ -108,17 +108,13 @@ export default function Home() {
                   <div key={banner.id} className="relative flex-[0_0_100%] min-w-0">
                     <div className="w-full h-[70vw] md:h-screen relative">
                       <img src={banner.imageUrl} alt={banner.title} className="absolute inset-0 w-full h-full object-cover" />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-                        <div className="text-center text-white px-4">
-                          <h1 className="text-lg sm:text-2xl md:text-6xl font-serif font-bold mb-1 md:mb-4 leading-tight drop-shadow-lg">{banner.title}</h1>
-                          {banner.subtitle && <p className="text-xs sm:text-sm md:text-xl mb-3 md:mb-8 text-white/90 drop-shadow hidden sm:block">{banner.subtitle}</p>}
-                          {banner.linkUrl && (
-                            <Button asChild size="sm" className="text-xs md:text-lg md:h-11 md:px-8 font-serif">
-                              <Link href={banner.linkUrl}>Shop Now</Link>
-                            </Button>
-                          )}
+                      {banner.linkUrl && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-end z-10 pb-4 md:pb-8">
+                          <Button asChild size="sm" className="text-xs md:text-lg md:h-11 md:px-8 font-serif">
+                            <Link href={banner.linkUrl}>Shop Now</Link>
+                          </Button>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 ))}
