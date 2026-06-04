@@ -106,15 +106,16 @@ export default function Home() {
               <div className="flex">
                 {heroBanners.map((banner) => (
                   <div key={banner.id} className="relative flex-[0_0_100%] min-w-0">
-                    <div className="w-full h-[70vw] md:h-screen relative">
+                    <div className="w-full h-[70vw] md:h-screen relative bg-black">
                       <img src={banner.imageUrl} alt={banner.title} className="absolute inset-0 w-full h-full object-contain md:object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
-                      <div className="container mx-auto px-4 h-full flex flex-col justify-center relative z-10">
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent hidden md:block" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent md:hidden" />
+                      <div className="container mx-auto px-4 h-full flex flex-col justify-end md:justify-center pb-4 md:pb-0 relative z-10">
                         <div className="max-w-xl text-white">
-                          <h1 className="text-4xl md:text-6xl font-serif font-bold mb-4 leading-tight">{banner.title}</h1>
-                          {banner.subtitle && <p className="text-lg md:text-xl mb-8 text-white/90">{banner.subtitle}</p>}
+                          <h1 className="text-lg sm:text-2xl md:text-6xl font-serif font-bold mb-1 md:mb-4 leading-tight">{banner.title}</h1>
+                          {banner.subtitle && <p className="text-xs sm:text-sm md:text-xl mb-3 md:mb-8 text-white/90 hidden sm:block">{banner.subtitle}</p>}
                           {banner.linkUrl && (
-                            <Button asChild size="lg" className="text-lg font-serif">
+                            <Button asChild size="sm" className="text-xs md:text-lg md:h-11 md:px-8 font-serif">
                               <Link href={banner.linkUrl}>Shop Now</Link>
                             </Button>
                           )}
