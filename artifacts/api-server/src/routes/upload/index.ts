@@ -1,40 +1,10 @@
 import { Router, type IRouter } from "express";
 import path from "path";
+import fs from "fs";
 import { randomUUID } from "crypto";
-import { Storage } from "@google-cloud/storage";
 import { UploadImageBody, UploadImageResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
-
-const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
-
-const storageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
-      },
-    },
-    universe_domain: "googleapis.com",
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any,
-  projectId: "",
-});
-
-function getBucketAndDir(): { bucketName: string; privateDir: string } {
-  const dir = process.env.PRIVATE_OBJECT_DIR || "";
-  if (!dir) throw new Error("PRIVATE_OBJECT_DIR not set");
-  const parts = dir.replace(/^\//, "").split("/");
-  const bucketName = parts[0];
-  const privateDir = parts.slice(1).join("/");
-  return { bucketName, privateDir };
-}
 
 router.post("/upload/image", async (req, res): Promise<void> => {
   const parsed = UploadImageBody.safeParse(req.body);
@@ -59,20 +29,18 @@ router.post("/upload/image", async (req, res): Promise<void> => {
   const uniqueName = `${Date.now()}-${randomUUID()}${ext}`;
 
   try {
-    const { bucketName, privateDir } = getBucketAndDir();
-    const objectName = `${privateDir}/uploads/${uniqueName}`;
-    const bucket = storageClient.bucket(bucketName);
-    const file = bucket.file(objectName);
+    const uploadsDir = process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads");
+    const imagesDir = path.join(uploadsDir, "images");
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+    const filePath = path.join(imagesDir, uniqueName);
+    await fs.promises.writeFile(filePath, buffer);
 
-    await file.save(buffer, {
-      contentType,
-      metadata: { cacheControl: "public, max-age=31536000" },
-    });
-
-    const url = `/api/uploads/${uniqueName}`;
+    const url = `/api/uploads/images/${uniqueName}`;
     res.json(UploadImageResponse.parse({ url }));
   } catch (err) {
-    console.error("Upload to object storage failed:", err);
+    console.error("Upload failed:", err);
     res.status(500).json({ error: "Upload failed" });
   }
 });
@@ -86,26 +54,25 @@ router.get("/uploads/:filename", async (req, res): Promise<void> => {
   }
 
   try {
-    const { bucketName, privateDir } = getBucketAndDir();
-    const objectName = `${privateDir}/uploads/${filename}`;
-    const bucket = storageClient.bucket(bucketName);
-    const file = bucket.file(objectName);
+    const uploadsDir = process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads");
+    const searchPaths = [
+      path.join(uploadsDir, filename),
+      path.join(uploadsDir, "images", filename),
+      path.join(uploadsDir, "videos", filename),
+      path.join(uploadsDir, "files", filename),
+    ];
 
-    const [exists] = await file.exists();
-    if (!exists) {
-      res.status(404).json({ error: "Image not found" });
-      return;
+    for (const filePath of searchPaths) {
+      if (fs.existsSync(filePath)) {
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        res.sendFile(filePath);
+        return;
+      }
     }
 
-    const [metadata] = await file.getMetadata();
-    const contentType = (metadata.contentType as string) || "image/jpeg";
-
-    res.setHeader("Content-Type", contentType);
-    res.setHeader("Cache-Control", "public, max-age=31536000");
-
-    file.createReadStream().pipe(res);
+    res.status(404).json({ error: "Image not found" });
   } catch (err) {
-    console.error("Failed to serve image from object storage:", err);
+    console.error("Failed to serve image:", err);
     res.status(500).json({ error: "Failed to serve image" });
   }
 });

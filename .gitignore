@@ -47,3 +47,14 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Environment variables (secrets)
+.env
+.env.local
+.env.*
+!.env.example
+artifacts/api-server/.env
+artifacts/hasanaa/.env
+
+# Local uploads
+artifacts/api-server/uploads/

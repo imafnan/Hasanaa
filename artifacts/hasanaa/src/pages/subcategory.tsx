@@ -12,8 +12,8 @@ export default function SubcategoryPage() {
   );
 
   const { data: products, isLoading: loadingProducts } = useListProducts(
-    { subcategoryId: id },
-    { query: { enabled: !!id, queryKey: getListProductsQueryKey({ subcategoryId: id }) } }
+    { subcategoryId: id ? Number(id) : undefined },
+    { query: { enabled: !!id, queryKey: getListProductsQueryKey({ subcategoryId: id ? Number(id) : undefined }) } }
   );
 
   const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
