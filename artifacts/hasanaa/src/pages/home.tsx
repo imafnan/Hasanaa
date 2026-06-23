@@ -97,7 +97,7 @@ export default function Home() {
       {/* Hero Banner Carousel */}
       <section className="relative w-full">
         {loadingBanners ? (
-          <div className="w-full h-[70vw] md:h-screen bg-muted animate-pulse flex items-center justify-center">
+          <div className="w-full h-[55vw] sm:h-[50vw] md:h-[50vh] lg:h-[70vh] xl:h-[75vh] max-h-[500px] lg:max-h-[720px] xl:max-h-[850px] min-h-[260px] md:min-h-[380px] lg:min-h-[500px] xl:min-h-[620px] bg-muted animate-pulse flex items-center justify-center relative">
             <span className="text-muted-foreground">Loading...</span>
           </div>
         ) : heroBanners.length > 0 ? (
@@ -106,10 +106,10 @@ export default function Home() {
               <div className="flex">
                 {heroBanners.map((banner) => (
                   <div key={banner.id} className="relative flex-[0_0_100%] min-w-0">
-                    <div className="w-full h-[70vw] md:h-screen relative">
-                      <img src={banner.imageUrl} alt={banner.title} className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="w-full h-[55vw] sm:h-[50vw] md:h-[50vh] lg:h-[70vh] xl:h-[75vh] max-h-[500px] lg:max-h-[720px] xl:max-h-[850px] min-h-[260px] md:min-h-[380px] lg:min-h-[500px] xl:min-h-[620px] relative">
+                      <img src={banner.imageUrl} alt={banner.title} className="absolute inset-0 w-full h-full object-cover object-center" />
                       {banner.linkUrl && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-end z-10 pb-4 md:pb-8">
+                        <div className="absolute inset-0 flex flex-col items-center justify-end z-10 pb-4 md:pb-8 lg:pb-16 xl:pb-24">
                           <Button asChild size="sm" className="text-xs md:text-lg md:h-11 md:px-8 font-serif">
                             <Link href={banner.linkUrl}>Shop Now</Link>
                           </Button>
@@ -132,7 +132,7 @@ export default function Home() {
             )}
           </div>
         ) : (
-          <div className="w-full h-[70vw] md:h-screen relative">
+          <div className="w-full h-[55vw] sm:h-[50vw] md:h-[50vh] lg:h-[70vh] xl:h-[75vh] max-h-[500px] lg:max-h-[720px] xl:max-h-[850px] min-h-[260px] md:min-h-[380px] lg:min-h-[500px] xl:min-h-[620px] relative">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20" />
             <div className="container mx-auto px-4 h-full flex flex-col justify-center relative z-10">
               <div className="max-w-xl">

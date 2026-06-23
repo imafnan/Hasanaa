@@ -556,6 +556,10 @@ export const ListOrdersResponseItem = zod.object({
   customerPhone: zod.string(),
   customerAddress: zod.string(),
   customerCity: zod.string().nullable(),
+  customerEmail: zod.string().nullable(),
+  customerArea: zod.string().nullable(),
+  deliveryCharge: zod.string(),
+  vat: zod.string(),
   notes: zod.string().nullable(),
   status: zod.string(),
   totalAmount: zod.string(),
@@ -567,6 +571,7 @@ export const ListOrdersResponseItem = zod.object({
       quantity: zod.number(),
       size: zod.string().nullable(),
       color: zod.string().nullable(),
+      imageUrl: zod.string().nullable(),
     }),
   ),
   createdAt: zod.string(),
@@ -582,6 +587,8 @@ export const CreateOrderBody = zod.object({
   customerPhone: zod.string(),
   customerAddress: zod.string(),
   customerCity: zod.string().nullish(),
+  customerEmail: zod.string().nullish(),
+  customerArea: zod.string().nullish(),
   notes: zod.string().nullish(),
   items: zod.array(
     zod.object({
@@ -606,6 +613,10 @@ export const GetOrderResponse = zod.object({
   customerPhone: zod.string(),
   customerAddress: zod.string(),
   customerCity: zod.string().nullable(),
+  customerEmail: zod.string().nullable(),
+  customerArea: zod.string().nullable(),
+  deliveryCharge: zod.string(),
+  vat: zod.string(),
   notes: zod.string().nullable(),
   status: zod.string(),
   totalAmount: zod.string(),
@@ -617,6 +628,7 @@ export const GetOrderResponse = zod.object({
       quantity: zod.number(),
       size: zod.string().nullable(),
       color: zod.string().nullable(),
+      imageUrl: zod.string().nullable(),
     }),
   ),
   createdAt: zod.string(),
@@ -640,6 +652,10 @@ export const UpdateOrderStatusResponse = zod.object({
   customerPhone: zod.string(),
   customerAddress: zod.string(),
   customerCity: zod.string().nullable(),
+  customerEmail: zod.string().nullable(),
+  customerArea: zod.string().nullable(),
+  deliveryCharge: zod.string(),
+  vat: zod.string(),
   notes: zod.string().nullable(),
   status: zod.string(),
   totalAmount: zod.string(),
@@ -651,6 +667,7 @@ export const UpdateOrderStatusResponse = zod.object({
       quantity: zod.number(),
       size: zod.string().nullable(),
       color: zod.string().nullable(),
+      imageUrl: zod.string().nullable(),
     }),
   ),
   createdAt: zod.string(),
@@ -674,6 +691,10 @@ export const GetOrderStatsResponse = zod.object({
       customerPhone: zod.string(),
       customerAddress: zod.string(),
       customerCity: zod.string().nullable(),
+      customerEmail: zod.string().nullable(),
+      customerArea: zod.string().nullable(),
+      deliveryCharge: zod.string(),
+      vat: zod.string(),
       notes: zod.string().nullable(),
       status: zod.string(),
       totalAmount: zod.string(),
@@ -685,6 +706,7 @@ export const GetOrderStatsResponse = zod.object({
           quantity: zod.number(),
           size: zod.string().nullable(),
           color: zod.string().nullable(),
+          imageUrl: zod.string().nullable(),
         }),
       ),
       createdAt: zod.string(),
@@ -824,4 +846,26 @@ export const UploadImageBody = zod.object({
 
 export const UploadImageResponse = zod.object({
   url: zod.string(),
+});
+
+/**
+ * @summary Get the current delivery charge
+ */
+export const GetDeliveryChargeResponse = zod.object({
+  deliveryCharge: zod.number(),
+  vat: zod.number(),
+});
+
+/**
+ * @summary Update the current delivery charge (admin)
+ */
+export const UpdateDeliveryChargeBody = zod.object({
+  deliveryCharge: zod.number(),
+  vat: zod.number(),
+});
+
+export const UpdateDeliveryChargeResponse = zod.object({
+  success: zod.boolean(),
+  deliveryCharge: zod.number(),
+  vat: zod.number(),
 });

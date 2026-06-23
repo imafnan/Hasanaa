@@ -9,10 +9,12 @@ import { format } from "date-fns";
 import { Loader2, ArrowLeft, Printer } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function AdminOrderDetails() {
   const { id } = useParams();
   const orderId = Number(id);
+  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
 
   const { data: order, isLoading } = useGetOrder(
     orderId,
@@ -70,6 +72,11 @@ export default function AdminOrderDetails() {
     );
   }
 
+  const totalVal = parseFloat(order.totalAmount);
+  const deliveryVal = parseFloat(order.deliveryCharge || "0");
+  const vatVal = parseFloat((order as any).vat || "0");
+  const subtotalVal = order.items.reduce((sum, item) => sum + parseFloat(item.price) * item.quantity, 0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -119,10 +126,24 @@ export default function AdminOrderDetails() {
                     {order.items.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell>
-                          <div className="font-medium">{item.productName}</div>
-                          <div className="text-sm text-muted-foreground mt-1 flex gap-2">
-                            {item.size && <span>Size: {item.size}</span>}
-                            {item.color && <span>Color: {item.color}</span>}
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-12 h-16 bg-muted rounded overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-85 transition-opacity border border-border"
+                              onClick={() => item.imageUrl && setActiveImageUrl(item.imageUrl)}
+                            >
+                              {item.imageUrl ? (
+                                <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full bg-secondary/10" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">{item.productName}</div>
+                              <div className="text-sm text-muted-foreground mt-1 flex gap-2">
+                                {item.size && <span>Size: {item.size}</span>}
+                                {item.color && <span>Color: {item.color}</span>}
+                              </div>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">৳{item.price}</TableCell>
@@ -140,15 +161,21 @@ export default function AdminOrderDetails() {
                 <div className="w-full sm:w-1/2 space-y-3">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
-                    <span>৳{order.totalAmount}</span>
+                    <span>৳{subtotalVal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Shipping</span>
-                    <span>৳0.00</span>
+                    <span>৳{deliveryVal.toFixed(2)}</span>
                   </div>
+                  {vatVal > 0 && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>VAT</span>
+                      <span>৳{vatVal.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="border-t border-border pt-3 flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-primary">৳{order.totalAmount}</span>
+                    <span className="text-primary">৳{totalVal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -196,10 +223,20 @@ export default function AdminOrderDetails() {
                 <h4 className="text-sm font-medium text-muted-foreground">Phone</h4>
                 <p className="font-medium">{order.customerPhone}</p>
               </div>
+              {(order as any).customerEmail && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Email</h4>
+                  <p className="font-medium">{(order as any).customerEmail}</p>
+                </div>
+              )}
               <div className="border-t border-border pt-4">
                 <h4 className="text-sm font-medium text-muted-foreground mb-1">Shipping Address</h4>
                 <p>{order.customerAddress}</p>
-                {order.customerCity && <p>{order.customerCity}</p>}
+                {((order as any).customerArea || order.customerCity) && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {[(order as any).customerArea, order.customerCity].filter(Boolean).join(", ")}
+                  </p>
+                )}
               </div>
               {order.notes && (
                 <div className="border-t border-border pt-4">
@@ -211,6 +248,23 @@ export default function AdminOrderDetails() {
           </Card>
         </div>
       </div>
+
+      {activeImageUrl && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setActiveImageUrl(null)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] bg-background rounded-lg overflow-hidden p-2" onClick={(e) => e.stopPropagation()}>
+            <img src={activeImageUrl} alt="Product Preview" className="max-w-full max-h-[80vh] object-contain rounded-md" />
+            <button 
+              className="absolute top-4 right-4 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+              onClick={() => setActiveImageUrl(null)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

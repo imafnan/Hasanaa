@@ -27,6 +27,7 @@ import type {
   CreateProductBody,
   CreatePromotionBody,
   CreateSubcategoryBody,
+  DeliveryChargeResponse,
   ErrorResponse,
   HealthStatus,
   ListProductsParams,
@@ -42,6 +43,8 @@ import type {
   SuccessResponse,
   UpdateBannerBody,
   UpdateCategoryBody,
+  UpdateDeliveryChargeBody,
+  UpdateDeliveryChargeResponse,
   UpdateOrderStatusBody,
   UpdateProductBody,
   UpdatePromotionBody,
@@ -2998,4 +3001,169 @@ export const useUploadImage = <
   TContext
 > => {
   return useMutation(getUploadImageMutationOptions(options));
+};
+
+/**
+ * @summary Get the current delivery charge
+ */
+export const getGetDeliveryChargeUrl = () => {
+  return `/api/settings/delivery-charge`;
+};
+
+export const getDeliveryCharge = async (
+  options?: RequestInit,
+): Promise<DeliveryChargeResponse> => {
+  return customFetch<DeliveryChargeResponse>(getGetDeliveryChargeUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDeliveryChargeQueryKey = () => {
+  return [`/api/settings/delivery-charge`] as const;
+};
+
+export const getGetDeliveryChargeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDeliveryCharge>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDeliveryCharge>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDeliveryChargeQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDeliveryCharge>>
+  > = ({ signal }) => getDeliveryCharge({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDeliveryCharge>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDeliveryChargeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDeliveryCharge>>
+>;
+export type GetDeliveryChargeQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the current delivery charge
+ */
+
+export function useGetDeliveryCharge<
+  TData = Awaited<ReturnType<typeof getDeliveryCharge>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDeliveryCharge>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDeliveryChargeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update the current delivery charge (admin)
+ */
+export const getUpdateDeliveryChargeUrl = () => {
+  return `/api/settings/delivery-charge`;
+};
+
+export const updateDeliveryCharge = async (
+  updateDeliveryChargeBody: UpdateDeliveryChargeBody,
+  options?: RequestInit,
+): Promise<UpdateDeliveryChargeResponse> => {
+  return customFetch<UpdateDeliveryChargeResponse>(
+    getUpdateDeliveryChargeUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateDeliveryChargeBody),
+    },
+  );
+};
+
+export const getUpdateDeliveryChargeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDeliveryCharge>>,
+    TError,
+    { data: BodyType<UpdateDeliveryChargeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDeliveryCharge>>,
+  TError,
+  { data: BodyType<UpdateDeliveryChargeBody> },
+  TContext
+> => {
+  const mutationKey = ["updateDeliveryCharge"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDeliveryCharge>>,
+    { data: BodyType<UpdateDeliveryChargeBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateDeliveryCharge(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDeliveryChargeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDeliveryCharge>>
+>;
+export type UpdateDeliveryChargeMutationBody =
+  BodyType<UpdateDeliveryChargeBody>;
+export type UpdateDeliveryChargeMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update the current delivery charge (admin)
+ */
+export const useUpdateDeliveryCharge = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDeliveryCharge>>,
+    TError,
+    { data: BodyType<UpdateDeliveryChargeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateDeliveryCharge>>,
+  TError,
+  { data: BodyType<UpdateDeliveryChargeBody> },
+  TContext
+> => {
+  return useMutation(getUpdateDeliveryChargeMutationOptions(options));
 };

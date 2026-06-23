@@ -342,6 +342,8 @@ export interface OrderItem {
   size: string | null;
   /** @nullable */
   color: string | null;
+  /** @nullable */
+  imageUrl: string | null;
 }
 
 export interface Order {
@@ -351,6 +353,12 @@ export interface Order {
   customerAddress: string;
   /** @nullable */
   customerCity: string | null;
+  /** @nullable */
+  customerEmail: string | null;
+  /** @nullable */
+  customerArea: string | null;
+  deliveryCharge: string;
+  vat: string;
   /** @nullable */
   notes: string | null;
   status: string;
@@ -375,6 +383,10 @@ export interface CreateOrderBody {
   customerAddress: string;
   /** @nullable */
   customerCity?: string | null;
+  /** @nullable */
+  customerEmail?: string | null;
+  /** @nullable */
+  customerArea?: string | null;
   /** @nullable */
   notes?: string | null;
   items: CreateOrderItemBody[];
@@ -402,6 +414,22 @@ export interface UploadImageBody {
 
 export interface UploadImageResponse {
   url: string;
+}
+
+export interface DeliveryChargeResponse {
+  deliveryCharge: number;
+  vat: number;
+}
+
+export interface UpdateDeliveryChargeBody {
+  deliveryCharge: number;
+  vat: number;
+}
+
+export interface UpdateDeliveryChargeResponse {
+  success: boolean;
+  deliveryCharge: number;
+  vat: number;
 }
 
 export type ListSubcategoriesParams = {

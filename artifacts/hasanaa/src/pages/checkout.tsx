@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateOrder } from "@workspace/api-client-react";
+import { useCreateOrder, useGetDeliveryCharge } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,6 +25,8 @@ const checkoutSchema = z.object({
   customerPhone: z.string().min(10, "Valid phone number is required"),
   customerAddress: z.string().min(5, "Delivery address is required"),
   customerCity: z.string().min(2, "City is required"),
+  customerEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+  customerArea: z.string().min(2, "Area/Region is required"),
   notes: z.string().optional(),
 });
 
@@ -36,6 +38,8 @@ export default function CheckoutPage() {
   const createOrder = useCreateOrder();
   const { toast } = useToast();
 
+  const { data: deliveryChargeData } = useGetDeliveryCharge();
+
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
@@ -43,6 +47,8 @@ export default function CheckoutPage() {
       customerPhone: "",
       customerAddress: "",
       customerCity: "",
+      customerEmail: "",
+      customerArea: "",
       notes: "",
     },
   });
@@ -52,21 +58,25 @@ export default function CheckoutPage() {
     return null;
   }
 
-  const shippingCost = 100; // Flat rate shipping for example
-  const total = cartTotal + shippingCost;
+  const shippingCost = deliveryChargeData?.deliveryCharge ?? 100;
+  const vatPercentage = (deliveryChargeData as any)?.vat ?? 0;
+  const vatCost = cartTotal * (vatPercentage / 100);
+  const total = cartTotal + shippingCost + vatCost;
 
   const onSubmit = (data: CheckoutFormValues) => {
+    const payload = {
+      ...data,
+      customerEmail: data.customerEmail || null,
+      items: items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+      })),
+    };
     createOrder.mutate(
       {
-        data: {
-          ...data,
-          items: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            size: item.size,
-            color: item.color,
-          })),
-        }
+        data: payload
       },
       {
         onSuccess: (order) => {
@@ -122,12 +132,26 @@ export default function CheckoutPage() {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="customerEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="john@example.com" type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField
                   control={form.control}
                   name="customerCity"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-1">
+                    <FormItem>
                       <FormLabel>City</FormLabel>
                       <FormControl>
                         <Input placeholder="Dhaka" {...field} />
@@ -139,9 +163,23 @@ export default function CheckoutPage() {
 
                 <FormField
                   control={form.control}
+                  name="customerArea"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Area / Region</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Mirpur, Dhanmondi, etc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="customerAddress"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem>
                       <FormLabel>Full Address</FormLabel>
                       <FormControl>
                         <Input placeholder="House 123, Road 4, Block C..." {...field} />
@@ -224,6 +262,12 @@ export default function CheckoutPage() {
                 <span>Delivery Fee</span>
                 <span>৳{shippingCost.toFixed(2)}</span>
               </div>
+              {vatCost > 0 && (
+                <div className="flex justify-between text-muted-foreground text-sm">
+                  <span>VAT ({vatPercentage}%)</span>
+                  <span>৳{vatCost.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-muted-foreground text-sm">
                 <span>Payment Method</span>
                 <span>Cash on Delivery</span>

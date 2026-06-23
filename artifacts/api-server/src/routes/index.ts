@@ -8,6 +8,7 @@ import productsRouter from "./products";
 import ordersRouter from "./orders";
 import promotionsRouter from "./promotions";
 import uploadRouter from "./upload";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(productsRouter);
 router.use(ordersRouter);
 router.use(promotionsRouter);
 router.use(uploadRouter);
+router.use(settingsRouter);
 
 export default router;

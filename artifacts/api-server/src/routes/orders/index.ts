@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, ordersTable, productsTable } from "@workspace/db";
+import { db, ordersTable, productsTable, settingsTable } from "@workspace/db";
 import {
   CreateOrderBody,
   UpdateOrderStatusBody,
@@ -20,10 +20,22 @@ function formatOrder(o: typeof ordersTable.$inferSelect) {
     customerPhone: o.customerPhone,
     customerAddress: o.customerAddress,
     customerCity: o.customerCity ?? null,
+    customerEmail: o.customerEmail ?? null,
+    customerArea: o.customerArea ?? null,
+    deliveryCharge: String(o.deliveryCharge),
+    vat: String(o.vat),
     notes: o.notes ?? null,
     status: o.status,
     totalAmount: String(o.totalAmount),
-    items: (o.items as any[]) ?? [],
+    items: ((o.items as any[]) ?? []).map(item => ({
+      productId: item.productId,
+      productName: item.productName || "",
+      price: String(item.price || "0"),
+      quantity: item.quantity || 1,
+      size: item.size ?? null,
+      color: item.color ?? null,
+      imageUrl: item.imageUrl ?? null,
+    })),
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
   };
@@ -69,6 +81,22 @@ router.post("/orders", async (req, res): Promise<void> => {
 
   const { customerName, customerPhone, customerAddress, customerCity, notes, items } = parsed.data;
 
+  // Fetch current delivery charge setting from settingsTable
+  let [shippingSetting] = await db
+    .select()
+    .from(settingsTable)
+    .where(eq(settingsTable.key, "delivery_charge"));
+  
+  const deliveryCharge = shippingSetting ? parseFloat(shippingSetting.value) : 100;
+
+  // Fetch current VAT setting from settingsTable
+  let [vatSetting] = await db
+    .select()
+    .from(settingsTable)
+    .where(eq(settingsTable.key, "vat"));
+  
+  const vatPercentage = vatSetting ? parseFloat(vatSetting.value) : 0;
+
   let totalAmount = 0;
   const orderItems = [];
 
@@ -87,17 +115,24 @@ router.post("/orders", async (req, res): Promise<void> => {
       quantity: item.quantity,
       size: item.size ?? null,
       color: item.color ?? null,
+      imageUrl: product.imageUrl ?? null,
     });
   }
+
+  const vatAmount = totalAmount * (vatPercentage / 100);
 
   const [order] = await db.insert(ordersTable).values({
     customerName,
     customerPhone,
     customerAddress,
     customerCity: customerCity ?? null,
+    customerEmail: (parsed.data as any).customerEmail ?? null,
+    customerArea: (parsed.data as any).customerArea ?? null,
+    deliveryCharge: deliveryCharge.toFixed(2),
+    vat: vatAmount.toFixed(2),
     notes: notes ?? null,
     status: "pending",
-    totalAmount: totalAmount.toFixed(2),
+    totalAmount: (totalAmount + deliveryCharge + vatAmount).toFixed(2),
     items: orderItems,
   }).returning();
 

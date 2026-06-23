@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   Layers,
+  Settings,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/banners", label: "Banners", icon: ImageIcon },
   { href: "/admin/promotions", label: "Promotions", icon: Layers },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

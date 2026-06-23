@@ -26,6 +26,8 @@ tags:
     description: Promotion block management
   - name: upload
     description: File upload
+  - name: settings
+    description: System settings management
 
 paths:
   /healthz:
@@ -697,7 +699,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/UploadImageResponse"
 
+  /settings/delivery-charge:
+    get:
+      operationId: getDeliveryCharge
+      tags: [settings]
+      summary: Get the current delivery charge
+      responses:
+        "200":
+          description: Dynamic delivery charge setting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryChargeResponse"
+    post:
+      operationId: updateDeliveryCharge
+      tags: [settings]
+      summary: Update the current delivery charge (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeliveryChargeBody"
+      responses:
+        "200":
+          description: Delivery charge updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateDeliveryChargeResponse"
+
 components:
+
   schemas:
     HealthStatus:
       type: object
@@ -1344,6 +1377,8 @@ components:
           type: ["string", "null"]
         color:
           type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
       required:
         - productId
         - productName
@@ -1351,6 +1386,7 @@ components:
         - quantity
         - size
         - color
+        - imageUrl
 
     Order:
       type: object
@@ -1365,6 +1401,14 @@ components:
           type: string
         customerCity:
           type: ["string", "null"]
+        customerEmail:
+          type: ["string", "null"]
+        customerArea:
+          type: ["string", "null"]
+        deliveryCharge:
+          type: string
+        vat:
+          type: string
         notes:
           type: ["string", "null"]
         status:
@@ -1385,6 +1429,10 @@ components:
         - customerPhone
         - customerAddress
         - customerCity
+        - customerEmail
+        - customerArea
+        - deliveryCharge
+        - vat
         - notes
         - status
         - totalAmount
@@ -1402,6 +1450,10 @@ components:
         customerAddress:
           type: string
         customerCity:
+          type: ["string", "null"]
+        customerEmail:
+          type: ["string", "null"]
+        customerArea:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
@@ -1485,3 +1537,40 @@ components:
           type: string
       required:
         - url
+
+    DeliveryChargeResponse:
+      type: object
+      properties:
+        deliveryCharge:
+          type: number
+        vat:
+          type: number
+      required:
+        - deliveryCharge
+        - vat
+
+    UpdateDeliveryChargeBody:
+      type: object
+      properties:
+        deliveryCharge:
+          type: number
+        vat:
+          type: number
+      required:
+        - deliveryCharge
+        - vat
+
+    UpdateDeliveryChargeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        deliveryCharge:
+          type: number
+        vat:
+          type: number
+      required:
+        - success
+        - deliveryCharge
+        - vat
+

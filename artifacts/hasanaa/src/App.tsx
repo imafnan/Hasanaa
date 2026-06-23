@@ -26,6 +26,7 @@ import AdminProducts from "@/pages/admin/products";
 import AdminOrders from "@/pages/admin/orders";
 import AdminOrderDetails from "@/pages/admin/order-details";
 import AdminPromotions from "@/pages/admin/promotions";
+import AdminSettings from "@/pages/admin/settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +67,7 @@ function AdminRoutes() {
         <Route path="/admin/orders" component={AdminOrders} />
         <Route path="/admin/orders/:id" component={AdminOrderDetails} />
         <Route path="/admin/promotions" component={AdminPromotions} />
+        <Route path="/admin/settings" component={AdminSettings} />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>
