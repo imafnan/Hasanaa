@@ -207,6 +207,10 @@ export default function AdminOrderDetails() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="border-t border-border pt-4">
+                <h4 className="text-sm font-medium text-muted-foreground">Payment Method</h4>
+                <p className="font-medium mt-1">Cash on Delivery</p>
+              </div>
             </CardContent>
           </Card>
 

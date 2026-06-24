@@ -79,7 +79,7 @@ function Router() {
     <Switch>
       <Route path="/admin/login" component={AdminRoutes} />
       <Route path="/admin" component={AdminRoutes} />
-      <Route path="/admin/:rest*" component={AdminRoutes} />
+      <Route path="/admin/*" component={AdminRoutes} />
       <Route component={StoreRoutes} />
     </Switch>
   );
