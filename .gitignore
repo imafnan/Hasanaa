@@ -58,3 +58,7 @@ artifacts/hasanaa/.env
 
 # Local uploads
 artifacts/api-server/uploads/
+
+# Local MongoDB data
+mongodb-data/
+**/mongodb-data/

@@ -6,16 +6,12 @@ services:
     # Specify the root directory as '.' so pnpm workspace resolves all dependencies
     rootDir: .
     buildCommand: pnpm install && pnpm --filter @workspace/api-server build
-    startCommand: pnpm --filter @workspace/db push && pnpm --filter @workspace/api-server start
+    startCommand: pnpm --filter @workspace/api-server start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: DATABASE_URL
-        fromDatabase:
-          name: hasanaa-db
-          property: connectionString
       - key: SESSION_SECRET
         generateValue: true
       - key: ADMIN_USERNAME
@@ -23,10 +19,8 @@ services:
       - key: ADMIN_PASSWORD
         value: hasanaa2024
       - key: ALLOWED_ORIGINS
-        value: "*" # Replace with your Vercel frontend URL once deployed (e.g. https://hasanaa-store.vercel.app)
-
-databases:
-  - name: hasanaa-db
-    plan: free
-    databaseName: hasanaa
-    user: postgres
+        value: "*" # Replace with your Vercel frontend URL once deployed
+      - key: STORAGE_PROVIDER
+        value: local # Change to 'cloudinary' in production
+      - key: MONGODB_URI
+        value: "" # Set this in Render's Dashboard Environment settings

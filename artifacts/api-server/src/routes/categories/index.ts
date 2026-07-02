@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, categoriesTable, productsTable, subcategoriesTable } from "@workspace/db";
+import { CategoryModel, SubcategoryModel, ProductModel, getNextSequenceValue } from "@workspace/db";
 import {
   CreateCategoryBody,
   UpdateCategoryBody,
@@ -14,17 +13,21 @@ import {
 
 const router: IRouter = Router();
 
-function formatCategory(c: typeof categoriesTable.$inferSelect) {
+function formatCategory(c: any) {
   return {
-    ...c,
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
     imageUrl: c.imageUrl ?? null,
     parentTag: c.parentTag ?? null,
+    isActive: c.isActive,
+    sortOrder: c.sortOrder,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   };
 }
 
-function formatProduct(p: typeof productsTable.$inferSelect, categoryName?: string | null, subcategoryName?: string | null) {
+function formatProduct(p: any, categoryName?: string | null, subcategoryName?: string | null) {
   return {
     id: p.id,
     name: p.name,
@@ -50,7 +53,7 @@ function formatProduct(p: typeof productsTable.$inferSelect, categoryName?: stri
 }
 
 router.get("/categories", async (_req, res): Promise<void> => {
-  const cats = await db.select().from(categoriesTable).orderBy(categoriesTable.sortOrder, categoriesTable.createdAt);
+  const cats = await CategoryModel.find({}).sort({ sortOrder: 1, createdAt: 1 });
   res.json(ListCategoriesResponse.parse(cats.map(formatCategory)));
 });
 
@@ -61,14 +64,16 @@ router.post("/categories", async (req, res): Promise<void> => {
     return;
   }
 
-  const [cat] = await db.insert(categoriesTable).values({
+  const nextId = await getNextSequenceValue("Category");
+  const cat = await CategoryModel.create({
+    id: nextId,
     name: parsed.data.name,
     slug: parsed.data.slug,
     imageUrl: parsed.data.imageUrl ?? null,
     parentTag: parsed.data.parentTag ?? null,
     isActive: parsed.data.isActive ?? true,
     sortOrder: parsed.data.sortOrder ?? 0,
-  }).returning();
+  });
 
   res.status(201).json(GetCategoryResponse.parse({ ...formatCategory(cat), subcategories: [], products: [] }));
 });
@@ -80,22 +85,27 @@ router.get("/categories/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [cat] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, params.data.id));
+  const cat = await CategoryModel.findOne({ id: params.data.id });
   if (!cat) {
     res.status(404).json({ error: "Category not found" });
     return;
   }
 
   const [subcategories, products] = await Promise.all([
-    db.select().from(subcategoriesTable).where(eq(subcategoriesTable.categoryId, cat.id)).orderBy(subcategoriesTable.sortOrder),
-    db.select().from(productsTable).where(eq(productsTable.categoryId, cat.id)),
+    SubcategoryModel.find({ categoryId: cat.id }).sort({ sortOrder: 1, createdAt: 1 }),
+    ProductModel.find({ categoryId: cat.id }).sort({ createdAt: 1 }),
   ]);
 
   res.json(GetCategoryResponse.parse({
     ...formatCategory(cat),
     subcategories: subcategories.map(s => ({
-      ...s,
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      categoryId: s.categoryId,
       imageUrl: s.imageUrl ?? null,
+      isActive: s.isActive,
+      sortOrder: s.sortOrder,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     })),
@@ -116,7 +126,7 @@ router.patch("/categories/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: Record<string, any> = {};
   if (parsed.data.name != null) updateData.name = parsed.data.name;
   if (parsed.data.slug != null) updateData.slug = parsed.data.slug;
   if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
@@ -124,7 +134,12 @@ router.patch("/categories/:id", async (req, res): Promise<void> => {
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
   if (parsed.data.sortOrder != null) updateData.sortOrder = parsed.data.sortOrder;
 
-  const [cat] = await db.update(categoriesTable).set(updateData).where(eq(categoriesTable.id, params.data.id)).returning();
+  const cat = await CategoryModel.findOneAndUpdate(
+    { id: params.data.id },
+    { $set: updateData },
+    { new: true }
+  );
+
   if (!cat) {
     res.status(404).json({ error: "Category not found" });
     return;
@@ -140,7 +155,7 @@ router.delete("/categories/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [cat] = await db.delete(categoriesTable).where(eq(categoriesTable.id, params.data.id)).returning();
+  const cat = await CategoryModel.findOneAndDelete({ id: params.data.id });
   if (!cat) {
     res.status(404).json({ error: "Category not found" });
     return;

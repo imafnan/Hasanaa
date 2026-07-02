@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray } from "drizzle-orm";
-import { db, productsTable, categoriesTable, subcategoriesTable } from "@workspace/db";
+import { CategoryModel, SubcategoryModel, ProductModel, getNextSequenceValue } from "@workspace/db";
 import {
   CreateProductBody,
   UpdateProductBody,
@@ -15,7 +14,7 @@ import {
 const router: IRouter = Router();
 
 function formatProduct(
-  p: typeof productsTable.$inferSelect,
+  p: any,
   categoryName?: string | null,
   subcategoryName?: string | null,
   variants: Array<{ id: number; name: string; imageUrl: string | null; price: string; colors: string[] }> = [],
@@ -46,7 +45,7 @@ function formatProduct(
 
 async function fetchVariants(variantIds: number[]) {
   if (!variantIds || variantIds.length === 0) return [];
-  const rows = await db.select().from(productsTable).where(inArray(productsTable.id, variantIds));
+  const rows = await ProductModel.find({ id: { $in: variantIds } });
   return rows.map(v => ({
     id: v.id,
     name: v.name,
@@ -65,26 +64,32 @@ router.get("/products", async (req, res): Promise<void> => {
 
   const { categoryId, subcategoryId, featured } = queryParams.data as any;
 
-  const conditions = [];
-  if (categoryId != null) conditions.push(eq(productsTable.categoryId, Number(categoryId)));
-  if (subcategoryId != null) conditions.push(eq(productsTable.subcategoryId, Number(subcategoryId)));
-  if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
+  const query: Record<string, any> = {};
+  if (categoryId != null) query.categoryId = Number(categoryId);
+  if (subcategoryId != null) query.subcategoryId = Number(subcategoryId);
+  if (featured === "true") query.isFeatured = true;
 
-  const products = conditions.length > 0
-    ? await db.select({ product: productsTable, categoryName: categoriesTable.name, subcategoryName: subcategoriesTable.name })
-        .from(productsTable)
-        .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-        .leftJoin(subcategoriesTable, eq(productsTable.subcategoryId, subcategoriesTable.id))
-        .where(and(...conditions))
-        .orderBy(productsTable.createdAt)
-    : await db.select({ product: productsTable, categoryName: categoriesTable.name, subcategoryName: subcategoriesTable.name })
-        .from(productsTable)
-        .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-        .leftJoin(subcategoriesTable, eq(productsTable.subcategoryId, subcategoriesTable.id))
-        .orderBy(productsTable.createdAt);
+  const products = await ProductModel.find(query).sort({ createdAt: 1 });
 
-  res.json(ListProductsResponse.parse(products.map(({ product, categoryName, subcategoryName }) =>
-    formatProduct(product, categoryName, subcategoryName, [])
+  // Bulk look up categories and subcategories
+  const catIds = Array.from(new Set(products.map(p => p.categoryId).filter(Boolean)));
+  const subcatIds = Array.from(new Set(products.map(p => p.subcategoryId).filter(Boolean)));
+
+  const [categories, subcategories] = await Promise.all([
+    CategoryModel.find({ id: { $in: catIds } }),
+    SubcategoryModel.find({ id: { $in: subcatIds } }),
+  ]);
+
+  const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+  const subcategoryMap = new Map(subcategories.map(s => [s.id, s.name]));
+
+  res.json(ListProductsResponse.parse(products.map(p =>
+    formatProduct(
+      p,
+      p.categoryId ? categoryMap.get(p.categoryId) : null,
+      p.subcategoryId ? subcategoryMap.get(p.subcategoryId) : null,
+      []
+    )
   )));
 });
 
@@ -95,11 +100,13 @@ router.post("/products", async (req, res): Promise<void> => {
     return;
   }
 
-  const [product] = await db.insert(productsTable).values({
+  const nextId = await getNextSequenceValue("Product");
+  const product = await ProductModel.create({
+    id: nextId,
     name: parsed.data.name,
     description: parsed.data.description ?? null,
-    price: parsed.data.price,
-    originalPrice: parsed.data.originalPrice ?? null,
+    price: parseFloat(parsed.data.price),
+    originalPrice: parsed.data.originalPrice ? parseFloat(parsed.data.originalPrice) : null,
     imageUrl: parsed.data.imageUrl ?? null,
     images: parsed.data.images ?? [],
     sizeChartUrl: (parsed.data as any).sizeChartUrl ?? null,
@@ -110,16 +117,17 @@ router.post("/products", async (req, res): Promise<void> => {
     isFeatured: parsed.data.isFeatured ?? false,
     sizes: parsed.data.sizes ?? [],
     colors: parsed.data.colors ?? [],
-  }).returning();
+  });
 
   let categoryName: string | null = null;
   let subcategoryName: string | null = null;
+
   if (product.categoryId) {
-    const [cat] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, product.categoryId));
+    const cat = await CategoryModel.findOne({ id: product.categoryId });
     categoryName = cat?.name ?? null;
   }
   if (product.subcategoryId) {
-    const [sub] = await db.select().from(subcategoriesTable).where(eq(subcategoriesTable.id, product.subcategoryId));
+    const sub = await SubcategoryModel.findOne({ id: product.subcategoryId });
     subcategoryName = sub?.name ?? null;
   }
   const variants = await fetchVariants(product.variantIds ?? []);
@@ -134,18 +142,24 @@ router.get("/products/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const result = await db.select({ product: productsTable, categoryName: categoriesTable.name, subcategoryName: subcategoriesTable.name })
-    .from(productsTable)
-    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-    .leftJoin(subcategoriesTable, eq(productsTable.subcategoryId, subcategoriesTable.id))
-    .where(eq(productsTable.id, params.data.id));
-
-  if (result.length === 0) {
+  const product = await ProductModel.findOne({ id: params.data.id });
+  if (!product) {
     res.status(404).json({ error: "Product not found" });
     return;
   }
 
-  const { product, categoryName, subcategoryName } = result[0];
+  let categoryName: string | null = null;
+  let subcategoryName: string | null = null;
+
+  if (product.categoryId) {
+    const cat = await CategoryModel.findOne({ id: product.categoryId });
+    categoryName = cat?.name ?? null;
+  }
+  if (product.subcategoryId) {
+    const sub = await SubcategoryModel.findOne({ id: product.subcategoryId });
+    subcategoryName = sub?.name ?? null;
+  }
+
   const variants = await fetchVariants(product.variantIds ?? []);
   res.json(GetProductResponse.parse(formatProduct(product, categoryName, subcategoryName, variants)));
 });
@@ -163,11 +177,11 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: Record<string, any> = {};
   if (parsed.data.name != null) updateData.name = parsed.data.name;
   if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
-  if (parsed.data.price != null) updateData.price = parsed.data.price;
-  if (parsed.data.originalPrice !== undefined) updateData.originalPrice = parsed.data.originalPrice;
+  if (parsed.data.price != null) updateData.price = parseFloat(parsed.data.price);
+  if (parsed.data.originalPrice !== undefined) updateData.originalPrice = parsed.data.originalPrice ? parseFloat(parsed.data.originalPrice) : null;
   if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
   if (parsed.data.images != null) updateData.images = parsed.data.images;
   if ((parsed.data as any).sizeChartUrl !== undefined) updateData.sizeChartUrl = (parsed.data as any).sizeChartUrl;
@@ -179,7 +193,12 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
   if (parsed.data.sizes != null) updateData.sizes = parsed.data.sizes;
   if (parsed.data.colors != null) updateData.colors = parsed.data.colors;
 
-  const [product] = await db.update(productsTable).set(updateData).where(eq(productsTable.id, params.data.id)).returning();
+  const product = await ProductModel.findOneAndUpdate(
+    { id: params.data.id },
+    { $set: updateData },
+    { new: true }
+  );
+
   if (!product) {
     res.status(404).json({ error: "Product not found" });
     return;
@@ -187,12 +206,13 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
 
   let categoryName: string | null = null;
   let subcategoryName: string | null = null;
+
   if (product.categoryId) {
-    const [cat] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, product.categoryId));
+    const cat = await CategoryModel.findOne({ id: product.categoryId });
     categoryName = cat?.name ?? null;
   }
   if (product.subcategoryId) {
-    const [sub] = await db.select().from(subcategoriesTable).where(eq(subcategoriesTable.id, product.subcategoryId));
+    const sub = await SubcategoryModel.findOne({ id: product.subcategoryId });
     subcategoryName = sub?.name ?? null;
   }
   const variants = await fetchVariants(product.variantIds ?? []);
@@ -207,7 +227,7 @@ router.delete("/products/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [product] = await db.delete(productsTable).where(eq(productsTable.id, params.data.id)).returning();
+  const product = await ProductModel.findOneAndDelete({ id: params.data.id });
   if (!product) {
     res.status(404).json({ error: "Product not found" });
     return;

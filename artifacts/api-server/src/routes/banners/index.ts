@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, bannersTable } from "@workspace/db";
+import { BannerModel, getNextSequenceValue } from "@workspace/db";
 import {
   CreateBannerBody,
   UpdateBannerBody,
@@ -13,21 +12,25 @@ import {
 
 const router: IRouter = Router();
 
-function formatBanner(b: typeof bannersTable.$inferSelect) {
+function formatBanner(b: any) {
   return {
-    ...b,
+    id: b.id,
+    title: b.title,
     subtitle: b.subtitle ?? null,
+    imageUrl: b.imageUrl,
     linkUrl: b.linkUrl ?? null,
     categoryId: b.categoryId ?? null,
     subcategoryId: b.subcategoryId ?? null,
     position: b.position ?? "top",
+    isActive: b.isActive,
+    sortOrder: b.sortOrder,
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
   };
 }
 
 router.get("/banners", async (_req, res): Promise<void> => {
-  const banners = await db.select().from(bannersTable).orderBy(bannersTable.sortOrder, bannersTable.createdAt);
+  const banners = await BannerModel.find({}).sort({ sortOrder: 1, createdAt: 1 });
   res.json(ListBannersResponse.parse(banners.map(formatBanner)));
 });
 
@@ -38,7 +41,9 @@ router.post("/banners", async (req, res): Promise<void> => {
     return;
   }
 
-  const [banner] = await db.insert(bannersTable).values({
+  const nextId = await getNextSequenceValue("Banner");
+  const banner = await BannerModel.create({
+    id: nextId,
     title: parsed.data.title,
     subtitle: parsed.data.subtitle ?? null,
     imageUrl: parsed.data.imageUrl,
@@ -48,7 +53,7 @@ router.post("/banners", async (req, res): Promise<void> => {
     position: (parsed.data as any).position ?? "top",
     isActive: parsed.data.isActive ?? true,
     sortOrder: parsed.data.sortOrder ?? 0,
-  }).returning();
+  });
 
   res.status(201).json(GetBannerResponse.parse(formatBanner(banner)));
 });
@@ -60,7 +65,7 @@ router.get("/banners/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [banner] = await db.select().from(bannersTable).where(eq(bannersTable.id, params.data.id));
+  const banner = await BannerModel.findOne({ id: params.data.id });
   if (!banner) {
     res.status(404).json({ error: "Banner not found" });
     return;
@@ -82,7 +87,7 @@ router.patch("/banners/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: Record<string, any> = {};
   if (parsed.data.title != null) updateData.title = parsed.data.title;
   if (parsed.data.subtitle !== undefined) updateData.subtitle = parsed.data.subtitle;
   if (parsed.data.imageUrl != null) updateData.imageUrl = parsed.data.imageUrl;
@@ -93,7 +98,12 @@ router.patch("/banners/:id", async (req, res): Promise<void> => {
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
   if (parsed.data.sortOrder != null) updateData.sortOrder = parsed.data.sortOrder;
 
-  const [banner] = await db.update(bannersTable).set(updateData).where(eq(bannersTable.id, params.data.id)).returning();
+  const banner = await BannerModel.findOneAndUpdate(
+    { id: params.data.id },
+    { $set: updateData },
+    { new: true }
+  );
+
   if (!banner) {
     res.status(404).json({ error: "Banner not found" });
     return;
@@ -109,7 +119,7 @@ router.delete("/banners/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [banner] = await db.delete(bannersTable).where(eq(bannersTable.id, params.data.id)).returning();
+  const banner = await BannerModel.findOneAndDelete({ id: params.data.id });
   if (!banner) {
     res.status(404).json({ error: "Banner not found" });
     return;

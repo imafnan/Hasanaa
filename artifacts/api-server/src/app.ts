@@ -6,6 +6,12 @@ import path from "path";
 import fs from "fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { connectDB } from "@workspace/db";
+
+// Connect to MongoDB
+connectDB().catch((err) => {
+  logger.error({ err }, "Database connection failed at startup");
+});
 
 const app: Express = express();
 

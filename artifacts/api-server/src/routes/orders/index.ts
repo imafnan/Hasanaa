@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, ordersTable, productsTable, settingsTable } from "@workspace/db";
+import { OrderModel, ProductModel, SettingModel, getNextSequenceValue } from "@workspace/db";
 import {
   CreateOrderBody,
   UpdateOrderStatusBody,
@@ -13,7 +12,7 @@ import {
 
 const router: IRouter = Router();
 
-function formatOrder(o: typeof ordersTable.$inferSelect) {
+function formatOrder(o: any) {
   return {
     id: o.id,
     customerName: o.customerName,
@@ -42,7 +41,7 @@ function formatOrder(o: typeof ordersTable.$inferSelect) {
 }
 
 router.get("/orders/stats", async (_req, res): Promise<void> => {
-  const orders = await db.select().from(ordersTable).orderBy(ordersTable.createdAt);
+  const orders = await OrderModel.find({}).sort({ createdAt: 1 });
 
   const totalOrders = orders.length;
   const pendingOrders = orders.filter(o => o.status === "pending").length;
@@ -68,7 +67,7 @@ router.get("/orders/stats", async (_req, res): Promise<void> => {
 });
 
 router.get("/orders", async (_req, res): Promise<void> => {
-  const orders = await db.select().from(ordersTable).orderBy(ordersTable.createdAt);
+  const orders = await OrderModel.find({}).sort({ createdAt: 1 });
   res.json(ListOrdersResponse.parse(orders.map(formatOrder).reverse()));
 });
 
@@ -81,27 +80,19 @@ router.post("/orders", async (req, res): Promise<void> => {
 
   const { customerName, customerPhone, customerAddress, customerCity, notes, items } = parsed.data;
 
-  // Fetch current delivery charge setting from settingsTable
-  let [shippingSetting] = await db
-    .select()
-    .from(settingsTable)
-    .where(eq(settingsTable.key, "delivery_charge"));
-  
+  // Fetch current delivery charge setting
+  const shippingSetting = await SettingModel.findOne({ key: "delivery_charge" });
   const deliveryCharge = shippingSetting ? parseFloat(shippingSetting.value) : 100;
 
-  // Fetch current VAT setting from settingsTable
-  let [vatSetting] = await db
-    .select()
-    .from(settingsTable)
-    .where(eq(settingsTable.key, "vat"));
-  
+  // Fetch current VAT setting
+  const vatSetting = await SettingModel.findOne({ key: "vat" });
   const vatPercentage = vatSetting ? parseFloat(vatSetting.value) : 0;
 
   let totalAmount = 0;
   const orderItems = [];
 
   for (const item of items) {
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
+    const product = await ProductModel.findOne({ id: item.productId });
     if (!product) {
       res.status(400).json({ error: `Product ${item.productId} not found` });
       return;
@@ -111,7 +102,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     orderItems.push({
       productId: item.productId,
       productName: product.name,
-      price: String(price),
+      price: price,
       quantity: item.quantity,
       size: item.size ?? null,
       color: item.color ?? null,
@@ -120,21 +111,23 @@ router.post("/orders", async (req, res): Promise<void> => {
   }
 
   const vatAmount = totalAmount * (vatPercentage / 100);
+  const nextId = await getNextSequenceValue("Order");
 
-  const [order] = await db.insert(ordersTable).values({
+  const order = await OrderModel.create({
+    id: nextId,
     customerName,
     customerPhone,
     customerAddress,
     customerCity: customerCity ?? null,
     customerEmail: (parsed.data as any).customerEmail ?? null,
     customerArea: (parsed.data as any).customerArea ?? null,
-    deliveryCharge: deliveryCharge.toFixed(2),
-    vat: vatAmount.toFixed(2),
+    deliveryCharge,
+    vat: vatAmount,
     notes: notes ?? null,
     status: "pending",
-    totalAmount: (totalAmount + deliveryCharge + vatAmount).toFixed(2),
+    totalAmount: totalAmount + deliveryCharge + vatAmount,
     items: orderItems,
-  }).returning();
+  });
 
   res.status(201).json(GetOrderResponse.parse(formatOrder(order)));
 });
@@ -146,7 +139,7 @@ router.get("/orders/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
+  const order = await OrderModel.findOne({ id: params.data.id });
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
@@ -168,18 +161,18 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [order] = await db
-    .update(ordersTable)
-    .set({ status: parsed.data.status })
-    .where(eq(ordersTable.id, params.data.id))
-    .returning();
+  const order = await OrderModel.findOneAndUpdate(
+    { id: params.data.id },
+    { status: parsed.data.status },
+    { new: true }
+  );
 
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
 
-  res.json(GetOrderResponse.parse(formatOrder(order)));
+  res.json(formatOrder(order));
 });
 
 export default router;

@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
-import { db, subcategoriesTable, productsTable, categoriesTable } from "@workspace/db";
+import { CategoryModel, SubcategoryModel, ProductModel, getNextSequenceValue } from "@workspace/db";
 import {
   CreateSubcategoryBody,
   UpdateSubcategoryBody,
@@ -12,10 +11,15 @@ import {
 
 const router: IRouter = Router();
 
-function formatSubcategory(s: typeof subcategoriesTable.$inferSelect) {
+function formatSubcategory(s: any) {
   return {
-    ...s,
+    id: s.id,
+    name: s.name,
+    slug: s.slug,
+    categoryId: s.categoryId,
     imageUrl: s.imageUrl ?? null,
+    isActive: s.isActive,
+    sortOrder: s.sortOrder,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   };
@@ -28,15 +32,12 @@ router.get("/subcategories", async (req, res): Promise<void> => {
     return;
   }
 
-  const conditions = [];
+  const query: Record<string, any> = {};
   if (params.data.categoryId != null) {
-    conditions.push(eq(subcategoriesTable.categoryId, params.data.categoryId));
+    query.categoryId = params.data.categoryId;
   }
 
-  const subs = conditions.length > 0
-    ? await db.select().from(subcategoriesTable).where(and(...conditions)).orderBy(subcategoriesTable.sortOrder, subcategoriesTable.createdAt)
-    : await db.select().from(subcategoriesTable).orderBy(subcategoriesTable.sortOrder, subcategoriesTable.createdAt);
-
+  const subs = await SubcategoryModel.find(query).sort({ sortOrder: 1, createdAt: 1 });
   res.json(subs.map(formatSubcategory));
 });
 
@@ -47,14 +48,16 @@ router.post("/subcategories", async (req, res): Promise<void> => {
     return;
   }
 
-  const [sub] = await db.insert(subcategoriesTable).values({
+  const nextId = await getNextSequenceValue("Subcategory");
+  const sub = await SubcategoryModel.create({
+    id: nextId,
     name: parsed.data.name,
     slug: parsed.data.slug,
     categoryId: parsed.data.categoryId,
     imageUrl: parsed.data.imageUrl ?? null,
     isActive: parsed.data.isActive ?? true,
     sortOrder: parsed.data.sortOrder ?? 0,
-  }).returning();
+  });
 
   res.status(201).json(formatSubcategory(sub));
 });
@@ -66,14 +69,14 @@ router.get("/subcategories/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [sub] = await db.select().from(subcategoriesTable).where(eq(subcategoriesTable.id, params.data.id));
+  const sub = await SubcategoryModel.findOne({ id: params.data.id });
   if (!sub) {
     res.status(404).json({ error: "Subcategory not found" });
     return;
   }
 
-  const products = await db.select().from(productsTable).where(eq(productsTable.subcategoryId, sub.id));
-  const [cat] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, sub.categoryId));
+  const products = await ProductModel.find({ subcategoryId: sub.id });
+  const cat = await CategoryModel.findOne({ id: sub.categoryId });
 
   res.json({
     ...formatSubcategory(sub),
@@ -115,7 +118,7 @@ router.patch("/subcategories/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: Record<string, any> = {};
   if (parsed.data.name != null) updateData.name = parsed.data.name;
   if (parsed.data.slug != null) updateData.slug = parsed.data.slug;
   if (parsed.data.categoryId != null) updateData.categoryId = parsed.data.categoryId;
@@ -123,7 +126,12 @@ router.patch("/subcategories/:id", async (req, res): Promise<void> => {
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
   if (parsed.data.sortOrder != null) updateData.sortOrder = parsed.data.sortOrder;
 
-  const [sub] = await db.update(subcategoriesTable).set(updateData).where(eq(subcategoriesTable.id, params.data.id)).returning();
+  const sub = await SubcategoryModel.findOneAndUpdate(
+    { id: params.data.id },
+    { $set: updateData },
+    { new: true }
+  );
+
   if (!sub) {
     res.status(404).json({ error: "Subcategory not found" });
     return;
@@ -139,7 +147,7 @@ router.delete("/subcategories/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [sub] = await db.delete(subcategoriesTable).where(eq(subcategoriesTable.id, params.data.id)).returning();
+  const sub = await SubcategoryModel.findOneAndDelete({ id: params.data.id });
   if (!sub) {
     res.status(404).json({ error: "Subcategory not found" });
     return;

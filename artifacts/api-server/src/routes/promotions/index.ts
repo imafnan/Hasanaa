@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, promotionsTable } from "@workspace/db";
+import { PromotionModel, getNextSequenceValue } from "@workspace/db";
 import {
   CreatePromotionBody,
   UpdatePromotionBody,
@@ -11,17 +10,22 @@ import {
 
 const router: IRouter = Router();
 
-function formatPromotion(p: typeof promotionsTable.$inferSelect) {
+function formatPromotion(p: any) {
   return {
-    ...p,
-    items: (p.items as any[]) ?? [],
+    id: p.id,
+    title: p.title,
+    gridType: p.gridType,
+    position: p.position,
+    isActive: p.isActive,
+    sortOrder: p.sortOrder,
+    items: p.items ?? [],
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
 }
 
 router.get("/promotions", async (_req, res): Promise<void> => {
-  const promotions = await db.select().from(promotionsTable).orderBy(promotionsTable.sortOrder, promotionsTable.createdAt);
+  const promotions = await PromotionModel.find({}).sort({ sortOrder: 1, createdAt: 1 });
   res.json(promotions.map(formatPromotion));
 });
 
@@ -32,14 +36,16 @@ router.post("/promotions", async (req, res): Promise<void> => {
     return;
   }
 
-  const [promo] = await db.insert(promotionsTable).values({
+  const nextId = await getNextSequenceValue("Promotion");
+  const promo = await PromotionModel.create({
+    id: nextId,
     title: parsed.data.title,
     gridType: parsed.data.gridType,
     position: parsed.data.position,
     isActive: parsed.data.isActive ?? true,
     sortOrder: parsed.data.sortOrder ?? 0,
-    items: (parsed.data.items ?? []) as any,
-  }).returning();
+    items: parsed.data.items ?? [],
+  });
 
   res.status(201).json(formatPromotion(promo));
 });
@@ -51,7 +57,7 @@ router.get("/promotions/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [promo] = await db.select().from(promotionsTable).where(eq(promotionsTable.id, params.data.id));
+  const promo = await PromotionModel.findOne({ id: params.data.id });
   if (!promo) {
     res.status(404).json({ error: "Promotion not found" });
     return;
@@ -73,15 +79,20 @@ router.patch("/promotions/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: Record<string, any> = {};
   if (parsed.data.title != null) updateData.title = parsed.data.title;
   if (parsed.data.gridType != null) updateData.gridType = parsed.data.gridType;
   if (parsed.data.position != null) updateData.position = parsed.data.position;
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
   if (parsed.data.sortOrder != null) updateData.sortOrder = parsed.data.sortOrder;
-  if (parsed.data.items !== undefined) updateData.items = parsed.data.items as any;
+  if (parsed.data.items !== undefined) updateData.items = parsed.data.items;
 
-  const [promo] = await db.update(promotionsTable).set(updateData).where(eq(promotionsTable.id, params.data.id)).returning();
+  const promo = await PromotionModel.findOneAndUpdate(
+    { id: params.data.id },
+    { $set: updateData },
+    { new: true }
+  );
+
   if (!promo) {
     res.status(404).json({ error: "Promotion not found" });
     return;
@@ -97,7 +108,7 @@ router.delete("/promotions/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [promo] = await db.delete(promotionsTable).where(eq(promotionsTable.id, params.data.id)).returning();
+  const promo = await PromotionModel.findOneAndDelete({ id: params.data.id });
   if (!promo) {
     res.status(404).json({ error: "Promotion not found" });
     return;
