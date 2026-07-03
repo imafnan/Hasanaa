@@ -4,9 +4,9 @@ services:
     env: node
     plan: free
     # Specify the root directory as '.' so pnpm workspace resolves all dependencies
-    rootDir: .
-    buildCommand: pnpm install && pnpm --filter @workspace/api-server build
-    startCommand: pnpm --filter @workspace/api-server start
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
