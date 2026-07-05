@@ -5,6 +5,7 @@ import {
   useListCategories, getListCategoriesQueryKey,
   useListSubcategories, getListSubcategoriesQueryKey,
 } from "@workspace/api-client-react";
+import { useUploadImageHelper } from "@/hooks/use-upload-helper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,10 +31,12 @@ export default function AdminProducts() {
   const deleteProduct = useDeleteProduct();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { uploadSingle, uploadMultiple } = useUploadImageHelper();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -80,25 +83,39 @@ export default function AdminProducts() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !price) { toast({ title: "Name and price are required", variant: "destructive" }); return; }
-    const payload: any = {
-      name, description: description || null, price,
-      originalPrice: originalPrice || null, imageUrl: imageUrl || null, images,
-      sizeChartUrl: sizeChartUrl || null,
-      variantIds,
-      categoryId: categoryId && categoryId !== "none" ? parseInt(categoryId) : null,
-      subcategoryId: subcategoryId && subcategoryId !== "none" ? parseInt(subcategoryId) : null,
-      inStock,
-      sizes: sizesStr.split(",").map(s => s.trim()).filter(Boolean),
-      colors: colorsStr.split(",").map(c => c.trim()).filter(Boolean),
-    };
-    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) }); toast({ title: editingId ? "Product updated" : "Product created" }); setIsDialogOpen(false); resetForm(); };
-    if (editingId) {
-      updateProduct.mutate({ id: editingId, data: payload }, { onSuccess });
-    } else {
-      createProduct.mutate({ data: payload }, { onSuccess });
+
+    setIsUploading(true);
+    try {
+      const allPhotos = imageUrl ? [imageUrl, ...images] : images;
+      const uploadedPhotos = await uploadMultiple(allPhotos);
+      const finalImageUrl = uploadedPhotos[0] || null;
+      const finalImages = uploadedPhotos.slice(1);
+
+      const finalSizeChartUrl = await uploadSingle(sizeChartUrl);
+
+      const payload: any = {
+        name, description: description || null, price,
+        originalPrice: originalPrice || null, imageUrl: finalImageUrl, images: finalImages,
+        sizeChartUrl: finalSizeChartUrl,
+        variantIds,
+        categoryId: categoryId && categoryId !== "none" ? parseInt(categoryId) : null,
+        subcategoryId: subcategoryId && subcategoryId !== "none" ? parseInt(subcategoryId) : null,
+        inStock,
+        sizes: sizesStr.split(",").map(s => s.trim()).filter(Boolean),
+        colors: colorsStr.split(",").map(c => c.trim()).filter(Boolean),
+      };
+      const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) }); toast({ title: editingId ? "Product updated" : "Product created" }); setIsDialogOpen(false); setIsUploading(false); resetForm(); };
+      if (editingId) {
+        updateProduct.mutate({ id: editingId, data: payload }, { onSuccess, onError: () => setIsUploading(false) });
+      } else {
+        createProduct.mutate({ data: payload }, { onSuccess, onError: () => setIsUploading(false) });
+      }
+    } catch {
+      toast({ title: "Failed to upload product images", variant: "destructive" });
+      setIsUploading(false);
     }
   };
 
@@ -117,7 +134,7 @@ export default function AdminProducts() {
     return p ? p.name : `#${vid}`;
   });
 
-  const isSubmitting = createProduct.isPending || updateProduct.isPending;
+  const isSubmitting = createProduct.isPending || updateProduct.isPending || isUploading;
 
   return (
     <div className="space-y-6">

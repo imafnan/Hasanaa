@@ -3,6 +3,7 @@ import {
   useListCategories, getListCategoriesQueryKey, useCreateCategory, useUpdateCategory, useDeleteCategory,
   useListSubcategories, getListSubcategoriesQueryKey, useCreateSubcategory, useUpdateSubcategory, useDeleteSubcategory,
 } from "@workspace/api-client-react";
+import { useUploadImageHelper } from "@/hooks/use-upload-helper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,12 +28,14 @@ export default function AdminCategories() {
   const deleteSubcategory = useDeleteSubcategory();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { uploadSingle } = useUploadImageHelper();
 
   const [expandedCategoryId, setExpandedCategoryId] = useState<number | null>(null);
 
   // Category form
   const [isCatDialogOpen, setIsCatDialogOpen] = useState(false);
   const [editingCatId, setEditingCatId] = useState<number | null>(null);
+  const [isCatUploading, setIsCatUploading] = useState(false);
   const [catName, setCatName] = useState("");
   const [catSlug, setCatSlug] = useState("");
   const [catImageUrl, setCatImageUrl] = useState("");
@@ -43,6 +46,7 @@ export default function AdminCategories() {
   // Subcategory form
   const [isSubDialogOpen, setIsSubDialogOpen] = useState(false);
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
+  const [isSubUploading, setIsSubUploading] = useState(false);
   const [subName, setSubName] = useState("");
   const [subSlug, setSubSlug] = useState("");
   const [subCategoryId, setSubCategoryId] = useState<string>("");
@@ -75,27 +79,51 @@ export default function AdminCategories() {
     setIsSubDialogOpen(true);
   };
 
-  const handleCatSubmit = (e: React.FormEvent) => {
+  const handleCatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!catName) return;
-    const payload = { name: catName, slug: catSlug || autoSlug(catName), imageUrl: catImageUrl || null, parentTag: catParentTag || null, isActive: catIsActive, sortOrder: parseInt(catSortOrder) || 0 };
-    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() }); toast({ title: editingCatId ? "Category updated" : "Category created" }); setIsCatDialogOpen(false); };
+
+    setIsCatUploading(true);
+    let finalImageUrl = catImageUrl;
+    try {
+      const uploadedUrl = await uploadSingle(catImageUrl);
+      if (uploadedUrl) finalImageUrl = uploadedUrl;
+    } catch {
+      toast({ title: "Failed to upload image", variant: "destructive" });
+      setIsCatUploading(false);
+      return;
+    }
+
+    const payload = { name: catName, slug: catSlug || autoSlug(catName), imageUrl: finalImageUrl || null, parentTag: catParentTag || null, isActive: catIsActive, sortOrder: parseInt(catSortOrder) || 0 };
+    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() }); toast({ title: editingCatId ? "Category updated" : "Category created" }); setIsCatDialogOpen(false); setIsCatUploading(false); };
     if (editingCatId) {
-      updateCategory.mutate({ id: editingCatId, data: payload }, { onSuccess });
+      updateCategory.mutate({ id: editingCatId, data: payload }, { onSuccess, onError: () => setIsCatUploading(false) });
     } else {
-      createCategory.mutate({ data: payload }, { onSuccess });
+      createCategory.mutate({ data: payload }, { onSuccess, onError: () => setIsCatUploading(false) });
     }
   };
 
-  const handleSubSubmit = (e: React.FormEvent) => {
+  const handleSubSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subName || !subCategoryId) return;
-    const payload = { name: subName, slug: subSlug || autoSlug(subName), categoryId: parseInt(subCategoryId), imageUrl: subImageUrl || null, isActive: subIsActive, sortOrder: parseInt(subSortOrder) || 0 };
-    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListSubcategoriesQueryKey({}) }); toast({ title: editingSubId ? "Subcategory updated" : "Subcategory created" }); setIsSubDialogOpen(false); };
+
+    setIsSubUploading(true);
+    let finalImageUrl = subImageUrl;
+    try {
+      const uploadedUrl = await uploadSingle(subImageUrl);
+      if (uploadedUrl) finalImageUrl = uploadedUrl;
+    } catch {
+      toast({ title: "Failed to upload image", variant: "destructive" });
+      setIsSubUploading(false);
+      return;
+    }
+
+    const payload = { name: subName, slug: subSlug || autoSlug(subName), categoryId: parseInt(subCategoryId), imageUrl: finalImageUrl || null, isActive: subIsActive, sortOrder: parseInt(subSortOrder) || 0 };
+    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListSubcategoriesQueryKey({}) }); toast({ title: editingSubId ? "Subcategory updated" : "Subcategory created" }); setIsSubDialogOpen(false); setIsSubUploading(false); };
     if (editingSubId) {
-      updateSubcategory.mutate({ id: editingSubId, data: payload }, { onSuccess });
+      updateSubcategory.mutate({ id: editingSubId, data: payload }, { onSuccess, onError: () => setIsSubUploading(false) });
     } else {
-      createSubcategory.mutate({ data: payload }, { onSuccess });
+      createSubcategory.mutate({ data: payload }, { onSuccess, onError: () => setIsSubUploading(false) });
     }
   };
 
@@ -228,8 +256,8 @@ export default function AdminCategories() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setIsCatDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createCategory.isPending || updateCategory.isPending}>
-                {(createCategory.isPending || updateCategory.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={createCategory.isPending || updateCategory.isPending || isCatUploading}>
+                {(createCategory.isPending || updateCategory.isPending || isCatUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editingCatId ? "Save Changes" : "Create"}
               </Button>
             </div>
@@ -266,8 +294,8 @@ export default function AdminCategories() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setIsSubDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createSubcategory.isPending || updateSubcategory.isPending}>
-                {(createSubcategory.isPending || updateSubcategory.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={createSubcategory.isPending || updateSubcategory.isPending || isSubUploading}>
+                {(createSubcategory.isPending || updateSubcategory.isPending || isSubUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editingSubId ? "Save Changes" : "Create"}
               </Button>
             </div>

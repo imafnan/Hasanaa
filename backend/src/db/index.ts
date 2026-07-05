@@ -1,12 +1,20 @@
 import mongoose, { Schema } from "mongoose";
 import path from "path";
 import fs from "fs";
+import dns from "dns";
 
 let mongoServer: any = null;
 
 // Connection helper
 export async function connectDB(): Promise<void> {
   if (mongoose.connection.readyState >= 1) return;
+
+  // Set public DNS servers to resolve MongoDB Atlas SRV records correctly
+  try {
+    dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
+  } catch (e) {
+    console.warn("Failed to set custom DNS servers, using defaults:", e);
+  }
 
   let uri = process.env.MONGODB_URI;
 

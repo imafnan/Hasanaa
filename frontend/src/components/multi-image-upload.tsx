@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
-import { useUploadImage } from "@workspace/api-client-react";
-import { Loader2, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 
 interface MultiImageUploadProps {
   values: string[];
@@ -11,27 +10,19 @@ interface MultiImageUploadProps {
 }
 
 export function MultiImageUpload({ values, onChange, label = "Images", maxImages = 10 }: MultiImageUploadProps) {
-  const uploadImage = useUploadImage();
-  const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const uploadFile = async (file: File): Promise<string | null> => {
+  const readFileAsDataURL = (file: File): Promise<string | null> => {
     if (file.size > 10 * 1024 * 1024) {
       alert(`${file.name} is too large. Maximum size is 10MB.`);
-      return null;
+      return Promise.resolve(null);
     }
     return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
-        try {
-          const response = await uploadImage.mutateAsync({ data: { data: dataUrl, filename: file.name } });
-          resolve(response.url);
-        } catch {
-          alert(`Failed to upload ${file.name}.`);
-          resolve(null);
-        }
+        resolve(dataUrl);
       };
       reader.readAsDataURL(file);
     });
@@ -42,14 +33,13 @@ export function MultiImageUpload({ values, onChange, label = "Images", maxImages
     const available = maxImages - values.length;
     if (available <= 0) return;
     const toUpload = fileArr.slice(0, available);
-    setUploading(true);
-    const urls: string[] = [];
+    
+    const newBase64s: string[] = [];
     for (const file of toUpload) {
-      const url = await uploadFile(file);
-      if (url) urls.push(url);
+      const base64 = await readFileAsDataURL(file);
+      if (base64) newBase64s.push(base64);
     }
-    onChange([...values, ...urls]);
-    setUploading(false);
+    onChange([...values, ...newBase64s]);
   };
 
   const removeImage = (index: number) => {
@@ -95,11 +85,7 @@ export function MultiImageUpload({ values, onChange, label = "Images", maxImages
           }}
         >
           <div className="flex flex-col items-center gap-2 text-muted-foreground pointer-events-none">
-            {uploading ? (
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            ) : (
-              <Upload className="h-6 w-6" />
-            )}
+            <Upload className="h-6 w-6" />
             <p className="text-sm font-medium">
               <span className="text-primary">Click to upload</span> or drag & drop
             </p>
@@ -113,7 +99,6 @@ export function MultiImageUpload({ values, onChange, label = "Images", maxImages
             accept="image/*"
             multiple
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
-            disabled={uploading}
           />
         </div>
       )}

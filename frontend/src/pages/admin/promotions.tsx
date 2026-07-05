@@ -5,6 +5,7 @@ import {
   useListCategories, getListCategoriesQueryKey,
   useListSubcategories, getListSubcategoriesQueryKey,
 } from "@workspace/api-client-react";
+import { useUploadImageHelper } from "@/hooks/use-upload-helper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,9 +38,11 @@ export default function AdminPromotions() {
   const deletePromotion = useDeletePromotion();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { uploadSingle } = useUploadImageHelper();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [title, setTitle] = useState("");
   const [gridType, setGridType] = useState<"2" | "4">("4");
@@ -84,16 +87,37 @@ export default function AdminPromotions() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) { toast({ title: "Title is required", variant: "destructive" }); return; }
-    const validItems = items.slice(0, maxItems).map(item => ({ ...item, categoryId: item.categoryId || null, subcategoryId: item.subcategoryId || null }));
-    const payload = { title, gridType: maxItems, position, isActive, sortOrder: parseInt(sortOrder) || 0, items: validItems };
-    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListPromotionsQueryKey() }); toast({ title: editingId ? "Promotion updated" : "Promotion created" }); setIsDialogOpen(false); };
-    if (editingId) {
-      updatePromotion.mutate({ id: editingId, data: payload }, { onSuccess });
-    } else {
-      createPromotion.mutate({ data: payload }, { onSuccess });
+
+    setIsUploading(true);
+    try {
+      const uploadedItems = await Promise.all(
+        items.slice(0, maxItems).map(async (item) => {
+          if (item.imageUrl && item.imageUrl.startsWith("data:")) {
+            const uploadedUrl = await uploadSingle(item.imageUrl);
+            return { ...item, imageUrl: uploadedUrl || "" };
+          }
+          return item;
+        })
+      );
+      const validItems = uploadedItems.map(item => ({
+        ...item,
+        categoryId: item.categoryId || null,
+        subcategoryId: item.subcategoryId || null
+      }));
+
+      const payload = { title, gridType: maxItems, position, isActive, sortOrder: parseInt(sortOrder) || 0, items: validItems };
+      const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListPromotionsQueryKey() }); toast({ title: editingId ? "Promotion updated" : "Promotion created" }); setIsDialogOpen(false); setIsUploading(false); };
+      if (editingId) {
+        updatePromotion.mutate({ id: editingId, data: payload }, { onSuccess, onError: () => setIsUploading(false) });
+      } else {
+        createPromotion.mutate({ data: payload }, { onSuccess, onError: () => setIsUploading(false) });
+      }
+    } catch {
+      toast({ title: "Failed to upload promotion images", variant: "destructive" });
+      setIsUploading(false);
     }
   };
 
@@ -103,7 +127,7 @@ export default function AdminPromotions() {
     }
   };
 
-  const isSubmitting = createPromotion.isPending || updatePromotion.isPending;
+  const isSubmitting = createPromotion.isPending || updatePromotion.isPending || isUploading;
 
   return (
     <div className="space-y-6">

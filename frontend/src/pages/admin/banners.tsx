@@ -4,6 +4,7 @@ import {
   useListCategories, getListCategoriesQueryKey,
   useListSubcategories, getListSubcategoriesQueryKey,
 } from "@workspace/api-client-react";
+import { useUploadImageHelper } from "@/hooks/use-upload-helper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,9 +33,11 @@ export default function AdminBanners() {
   const deleteBanner = useDeleteBanner();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { uploadSingle } = useUploadImageHelper();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
@@ -68,21 +71,33 @@ export default function AdminBanners() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !imageUrl) { toast({ title: "Title and image are required", variant: "destructive" }); return; }
+
+    setIsUploading(true);
+    let finalImageUrl = imageUrl;
+    try {
+      const uploadedUrl = await uploadSingle(imageUrl);
+      if (uploadedUrl) finalImageUrl = uploadedUrl;
+    } catch {
+      toast({ title: "Failed to upload image", variant: "destructive" });
+      setIsUploading(false);
+      return;
+    }
+
     const payload = {
-      title, subtitle: subtitle || null, imageUrl,
+      title, subtitle: subtitle || null, imageUrl: finalImageUrl,
       linkUrl: linkUrl || null, position,
       categoryId: categoryId && categoryId !== "none" ? parseInt(categoryId) : null,
       subcategoryId: subcategoryId && subcategoryId !== "none" ? parseInt(subcategoryId) : null,
       isActive, sortOrder: parseInt(sortOrder) || 0,
     };
-    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListBannersQueryKey() }); toast({ title: editingId ? "Banner updated" : "Banner created" }); setIsDialogOpen(false); };
+    const onSuccess = () => { queryClient.invalidateQueries({ queryKey: getListBannersQueryKey() }); toast({ title: editingId ? "Banner updated" : "Banner created" }); setIsDialogOpen(false); setIsUploading(false); };
     if (editingId) {
-      updateBanner.mutate({ id: editingId, data: payload }, { onSuccess });
+      updateBanner.mutate({ id: editingId, data: payload }, { onSuccess, onError: () => setIsUploading(false) });
     } else {
-      createBanner.mutate({ data: payload }, { onSuccess });
+      createBanner.mutate({ data: payload }, { onSuccess, onError: () => setIsUploading(false) });
     }
   };
 
@@ -92,7 +107,7 @@ export default function AdminBanners() {
     }
   };
 
-  const isSubmitting = createBanner.isPending || updateBanner.isPending;
+  const isSubmitting = createBanner.isPending || updateBanner.isPending || isUploading;
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useUploadImage } from "@workspace/api-client-react";
-import { Loader2, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 
 interface ImageUploadProps {
   value: string;
@@ -11,7 +10,6 @@ interface ImageUploadProps {
 }
 
 export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadProps) {
-  const uploadImage = useUploadImage();
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = async (file: File) => {
@@ -24,14 +22,7 @@ export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadPro
     const reader = new FileReader();
     reader.onload = async (e) => {
       const dataUrl = e.target?.result as string;
-      try {
-        const response = await uploadImage.mutateAsync({
-          data: { data: dataUrl, filename: file.name }
-        });
-        onChange(response.url);
-      } catch {
-        alert("Failed to upload image.");
-      }
+      onChange(dataUrl);
     };
     reader.readAsDataURL(file);
   };
@@ -63,11 +54,7 @@ export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadPro
           }}
         >
           <label className="flex flex-col items-center gap-2 text-muted-foreground cursor-pointer">
-            {uploadImage.isPending ? (
-              <Loader2 className="h-7 w-7 animate-spin text-primary" />
-            ) : (
-              <Upload className="h-7 w-7" />
-            )}
+            <Upload className="h-7 w-7" />
             <div className="text-sm font-medium">
               <span className="text-primary hover:underline">Click to upload</span>{" "}
               or drag & drop
@@ -78,7 +65,6 @@ export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadPro
               className="hidden"
               accept="image/*"
               onChange={(e) => e.target.files && handleFileChange(e.target.files[0])}
-              disabled={uploadImage.isPending}
             />
           </label>
         </div>
