@@ -1,60 +1,41 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# Dependencies
+node_modules/
 
-# compiled output
-dist
-tmp
-out-tsc
+# Compiled output
+dist/
+build/
 *.tsbuildinfo
-.expo
-.expo-shared
-
-# dependencies
-node_modules
 
 # IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
-
-# System Files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 .DS_Store
-Thumbs.db
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
-
-# Replit
+# Replit cache/logs
 .cache/
 .local/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
 
-# Environment variables (secrets)
+# Environment variables
 .env
 .env.local
-.env.*
+.env.*.local
+.env.production
+.env.development
 !.env.example
-artifacts/api-server/.env
-artifacts/hasanaa/.env
 
-# Local uploads
-artifacts/api-server/uploads/
+# Local database storage
+mongodb-data/
+**/mongodb-data/
+
+# Local uploaded files
+uploads/
+**/uploads/
+!**/uploads/.gitkeep
